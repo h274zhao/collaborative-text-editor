@@ -1,0 +1,1 @@
+C:\Users\zhaoh\Desktop\warp\chat\rust\warp_ws\target\debug\warp_ws.exe: C:\Users\zhaoh\Desktop\warp\chat\rust\warp_ws\src\../../../static/index.html C:\Users\zhaoh\Desktop\warp\chat\rust\warp_ws\src\main.rs
