@@ -1,0 +1,11 @@
+[package]
+name = "warp_ws"
+version = "0.1.0"
+authors = [""]
+edition = "2018"
+
+[dependencies]
+futures = "0.3.15"
+warp = "0.3.1"
+tokio = { version = "1.0", features = ["macros", "sync", "rt-multi-thread"]}
+tokio-stream = { version = "0.1.1", features = ["net"] }
