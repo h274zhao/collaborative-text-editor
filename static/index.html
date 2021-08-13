@@ -14,16 +14,15 @@
         <div id="chat">
             <p><em>Connecting...</em></p>
         </div>
-        <input type="text" id="text" />
-        <button type="button" id="send">Send</button>
         <script type="text/javascript">
         const chat = document.getElementById('chat');
-        const text = document.getElementById('text');
+        //const input = document.getElementById('input');
         const uri = 'ws://' + location.host + '/chat';
         const ws = new WebSocket(uri);
+        //const line = document.createElement('p');
         function message(data) {
-            const line = document.createElement('p');
-            line.innerText = data;
+
+            input.value = data;
             chat.appendChild(line);
         }
         ws.onopen = function() {
@@ -41,8 +40,8 @@
         input.addEventListener('keyup',function(){
             const msg = input.value;
             ws.send(msg);
-            input.value = '';
-            message('<You>: ' + msg);});
+            //input.value = '';
+            message(msg);});
         </script>
     </body>
 </html>
