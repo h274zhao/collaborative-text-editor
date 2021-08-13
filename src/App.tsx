@@ -5,7 +5,6 @@ function App() {
   (() => {
     import("collaborative-text-editor").then((wasm) => {
       wasm.greet();
-      wasm.start_websocket();
     });
   })();
 

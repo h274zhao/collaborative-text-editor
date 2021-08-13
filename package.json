@@ -15,7 +15,7 @@
     "react-scripts": "4.0.3",
     "typescript": "^4.1.2",
     "web-vitals": "^1.0.1",
-    "collaborative-text-editor": "file:../pkg"
+    "collaborative-text-editor": "file:wasm-greet/pkg"
   },
   "scripts": {
     "start": "set PORT=3001 && react-app-rewired start",

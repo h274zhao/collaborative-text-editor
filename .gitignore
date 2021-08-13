@@ -1,5 +1,5 @@
 /target
-pkg
+#pkg
 /rust/warp_ws/target
 /wasm/target
 

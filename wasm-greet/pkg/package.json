@@ -1,0 +1,16 @@
+{
+  "name": "wasm-greet",
+  "collaborators": [
+    "tenyage <tenyage@gmail.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "wasm_greet_bg.wasm",
+    "wasm_greet.js",
+    "wasm_greet_bg.js",
+    "wasm_greet.d.ts"
+  ],
+  "module": "wasm_greet.js",
+  "types": "wasm_greet.d.ts",
+  "sideEffects": false
+}
