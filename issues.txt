@@ -1,12 +1,17 @@
-1. not optimal --- rerender entire text if there was a update
 
-2. text data not persistant
 
 3. conflict issue caused by concurrency (implement ot by using wasm)
+
+
+1. not optimal --- rerender entire text if there was a update ()
+
+2. text data not persistant
 
 4. no intergration with Monaco
 
 5. no list of active users
 
 6. curse movement should also be recorded
+
+
 
