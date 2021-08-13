@@ -1,1 +1,0 @@
-C:\Users\zhaoh\Desktop\ot\uwaterloo-collaborative-text-editor\rust\warp_ws\target\debug\warp_ws.exe: C:\Users\zhaoh\Desktop\ot\uwaterloo-collaborative-text-editor\rust\warp_ws\src\../../../static/index.html C:\Users\zhaoh\Desktop\ot\uwaterloo-collaborative-text-editor\rust\warp_ws\src\main.rs
