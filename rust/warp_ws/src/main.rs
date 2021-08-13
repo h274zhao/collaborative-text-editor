@@ -60,6 +60,7 @@ async fn user_connected(ws: WebSocket, users: Users) {
             }
         };
         user_message(my_id, msg, &users).await;
+        
     }
 
     user_disconnected(my_id, &users2).await;
