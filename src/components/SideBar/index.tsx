@@ -1,58 +1,4 @@
-// import { useEffect, useState, useRef } from 'react';
-// import Editor from "@monaco-editor/react";
-// import { editor } from "monaco-editor/esm/vs/editor/editor.api";
-// import TextEditor from "./textEditor";
-// import './App.css';
-// import SideNav from './components/SideBar';
-
-// function App() {
-//   const [editor, setEditor] = useState<editor.IStandaloneCodeEditor>();
-//   const textEditor = useRef<TextEditor>();
-
-//   useEffect(() => {
-//     if (editor?.getModel()) {
-//       const model = editor.getModel()!;
-//       model.setValue("");
-//       model.setEOL(0);
-//       textEditor.current = new TextEditor({
-//         editor,
-//       })
-//     }
-//   }, [editor])
-//   return (
-//     <div className="App">
-//       <SideNav />
-//       <div className="editor">
-//         <Editor
-//           onMount={(editor) => setEditor(editor)}
-//         />
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default App;
-
-
-
-
-
-import { useEffect, useState, useRef } from 'react';
-import Editor from "@monaco-editor/react";
-import { editor } from "monaco-editor/esm/vs/editor/editor.api";
-import TextEditor from "./textEditor";
-import useHash from "./useHash"
-
-import './App.css';
-function getWsUri(id: string) {
-  return (
-    /*(window.location.origin.startsWith("https") ? "wss://" : "ws://") +
-    window.location.host +
-    `/api/socket/${id}`*/
-    'ws://localhost:8000/chat'
-  );
-}
-function App() {
+import React from 'react';
 import AppBar from '@material-ui/core/AppBar';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Divider from '@material-ui/core/Divider';
@@ -69,7 +15,6 @@ import MenuIcon from '@material-ui/icons/Menu';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import { makeStyles, useTheme, Theme, createStyles } from '@material-ui/core/styles';
-import './App.css';
 
 const drawerWidth = 240;
 
@@ -109,29 +54,18 @@ const useStyles = makeStyles((theme: Theme) =>
 );
 
 interface Props {
+  /**
+   * Injected by the documentation to work in an iframe.
+   * You won't need it on your project.
+   */
   window?: () => Window;
 }
 
-export default function App(props: Props) {
+export default function ResponsiveDrawer(props: Props) {
   const { window } = props;
   const classes = useStyles();
   const theme = useTheme();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [editor, setEditor] = useState<editor.IStandaloneCodeEditor>();
-  const textEditor = useRef<TextEditor>();
-  const id = useHash();
-
-  useEffect(() => {
-    if (editor?.getModel()) {
-      const model = editor.getModel()!;
-      model.setValue("");
-      model.setEOL(0);
-      textEditor.current = new TextEditor({
-        uri: getWsUri(id),
-        editor,
-      })
-    }
-  }, [editor])
+  const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -215,13 +149,7 @@ export default function App(props: Props) {
       </nav>
       <main className={classes.content}>
         <div className={classes.toolbar} />
-        <div className="App">
-          <div className="editor">
-            <Editor
-              onMount={(editor) => setEditor(editor)}
-            />
-          </div>
-        </div>
+        
       </main>
     </div>
   );
