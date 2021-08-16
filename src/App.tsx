@@ -1,42 +1,3 @@
-// import { useEffect, useState, useRef } from 'react';
-// import Editor from "@monaco-editor/react";
-// import { editor } from "monaco-editor/esm/vs/editor/editor.api";
-// import TextEditor from "./textEditor";
-// import './App.css';
-// import SideNav from './components/SideBar';
-
-// function App() {
-//   const [editor, setEditor] = useState<editor.IStandaloneCodeEditor>();
-//   const textEditor = useRef<TextEditor>();
-
-//   useEffect(() => {
-//     if (editor?.getModel()) {
-//       const model = editor.getModel()!;
-//       model.setValue("");
-//       model.setEOL(0);
-//       textEditor.current = new TextEditor({
-//         editor,
-//       })
-//     }
-//   }, [editor])
-//   return (
-//     <div className="App">
-//       <SideNav />
-//       <div className="editor">
-//         <Editor
-//           onMount={(editor) => setEditor(editor)}
-//         />
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default App;
-
-
-
-
-
 import { useEffect, useState, useRef } from 'react';
 import Editor from "@monaco-editor/react";
 import { editor } from "monaco-editor/esm/vs/editor/editor.api";
@@ -133,6 +94,31 @@ export default function App(props: Props) {
     }
   }, [editor])
 
+  useEffect(() => {
+    const chat: any = document.getElementById("chat")
+    const uri: string = 'ws://localhost:8000/';
+    const ws = new WebSocket(uri);
+
+    ws.onopen = function () {
+      chat.innerHTML = '<em> Connected</em>';
+      ws.send("My name is John");
+    };
+    ws.onmessage = function (event) {
+      alert(`[message] Data received from server: ${event.data}`);
+    };
+    ws.onclose = function () {
+      chat.innerHTML = '<em> Disconnected</em>';
+    };
+
+
+    // var input: any = document.getElementById('input');
+    // input.addEventListener('keyup', function () {
+    //   const msg = input.value;
+    //   ws.send(msg);
+    //   message(msg);
+    // });
+  })
+
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
@@ -178,7 +164,10 @@ export default function App(props: Props) {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap>
-            Responsive drawer
+            <div style={{ display: 'flex' }}>
+              OpenText Collaborative Editor:
+              <span id="chat"><em> Connecting...</em></span>
+            </div>
           </Typography>
         </Toolbar>
       </AppBar>
@@ -213,16 +202,13 @@ export default function App(props: Props) {
           </Drawer>
         </Hidden>
       </nav>
-      <main className={classes.content}>
-        <div className={classes.toolbar} />
-        <div className="App">
-          <div className="editor">
-            <Editor
-              onMount={(editor) => setEditor(editor)}
-            />
-          </div>
+      <div className="App">
+        <div className="editor">
+          <Editor
+            onMount={(editor) => setEditor(editor)}
+          />
         </div>
-      </main>
+      </div>
     </div>
   );
 }
