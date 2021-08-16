@@ -3,11 +3,20 @@ import logo from './logo.svg';
 import Editor from "@monaco-editor/react";
 import { editor } from "monaco-editor/esm/vs/editor/editor.api";
 import TextEditor from "./textEditor";
-import './App.css';
+import useHash from "./useHash"
 
+import './App.css';
+function getWsUri(id: string) {
+  return (
+    (window.location.origin.startsWith("https") ? "wss://" : "ws://") +
+    window.location.host +
+    `/api/socket/${id}`
+  );
+}
 function App() {
   const [editor, setEditor] = useState<editor.IStandaloneCodeEditor>();
   const textEditor = useRef<TextEditor>();
+  const id = useHash();
 
   useEffect(() => {
     if (editor?.getModel()) {
@@ -15,6 +24,7 @@ function App() {
       model.setValue("");
       model.setEOL(0);
       textEditor.current = new TextEditor({
+        uri: getWsUri(id),
         editor,
       })
     }
