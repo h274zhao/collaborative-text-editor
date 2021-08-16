@@ -6,6 +6,7 @@ import TextEditor from "./textEditor";
 import useHash from "./useHash"
 
 import './App.css';
+//TO-DO: need to do change the code to match our own server implementation
 function getWsUri(id: string) {
   return (
     (window.location.origin.startsWith("https") ? "wss://" : "ws://") +
@@ -13,6 +14,7 @@ function getWsUri(id: string) {
     `/api/socket/${id}`
   );
 }
+
 function App() {
   const [editor, setEditor] = useState<editor.IStandaloneCodeEditor>();
   const textEditor = useRef<TextEditor>();
