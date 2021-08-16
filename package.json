@@ -18,7 +18,7 @@
     "collaborative-text-editor": "file:wasm-greet/pkg"
   },
   "scripts": {
-    "start": "set PORT=3001 && react-app-rewired start",
+    "start": "react-app-rewired start",
     "build": "react-app-rewired build",
     "test": "react-app-rewired test",
     "eject": "react-scripts eject"
