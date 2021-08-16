@@ -75,7 +75,7 @@ async fn user_message(my_id: usize, msg: Message, users: &Users) {
     };
 
     let new_msg = format!("{}", msg);
-
+    eprintln!("SERVER: msg recieved by {} is {}", my_id, msg);
     for (&uid, tx) in users.read().await.iter() {
         if my_id != uid {
             if let Err(_disconnected) = tx.send(Ok(Message::text(new_msg.clone()))) {

@@ -70,6 +70,10 @@ class TextEditor {
     ws.onopen = () => {
 
       console.log("connected");
+      ws.send("msg");
+      ws.send("msg1");
+      ws.send("msg2");
+      ws.send("msg3");
       /*
       this.connecting = false;
       this.ws = ws;
@@ -99,8 +103,9 @@ class TextEditor {
       }
       */
     };
-    ws.onmessage = ({ data }) => {
-      console.log("msg");
+    ws.onmessage = (msg) => {
+      console.log("CLIENT: msg is ::: ");
+      console.log(msg.data);
     };
   }
 }
