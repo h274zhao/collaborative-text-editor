@@ -4,12 +4,14 @@ import { OpSeq } from "rust-wasm";
 export type Options = {
 	readonly uri: string;
 	readonly editor: editor.IStandaloneCodeEditor;
+  /*
 	readonly onConnected?: () => unknown;
   readonly onDisconnected?: () => unknown;
   readonly onDesynchronized?: () => unknown;
 	readonly onChangeLanguage?: (language: string) => unknown;
   readonly onChangeUsers?: (users: Record<number, UserInfo>) => unknown;
 	readonly reconnectInterval?: number;
+  */
 };
 
 export type UserInfo = {
@@ -21,9 +23,9 @@ class TextEditor {
 	private recentFailures: number = 0;
 	private connecting?: boolean;
 	private readonly model: editor.ITextModel;
-	private readonly onChangeHandle: IDisposable;
-	private readonly tryConnectId: number;
-  private readonly resetFailuresId: number;
+	//private readonly onChangeHandle: IDisposable;
+	//private readonly tryConnectId: number;
+  //private readonly resetFailuresId: number;
 
 
 	private currentValue: string = "";
@@ -38,22 +40,26 @@ class TextEditor {
 
 	constructor(readonly options: Options) {
 		this.model = options.editor.getModel()!;
+    this.tryConnect();
+    /*
 		this.onChangeHandle = options.editor.onDidChangeModelContent((e) =>
 			this.onChange(e)
 		);
 		const interval = options.reconnectInterval ?? 1000;
-    this.tryConnect();
     this.tryConnectId = window.setInterval(() => this.tryConnect(), interval);
     this.resetFailuresId = window.setInterval(
       () => (this.recentFailures = 0),
       15 * interval
     );
+    */
 	}
 
 	dispose() {
+    /*
     window.clearInterval(this.tryConnectId);
     window.clearInterval(this.resetFailuresId);
     this.onChangeHandle.dispose();
+    */
     this.ws?.close();
   }
 
@@ -62,6 +68,9 @@ class TextEditor {
     this.connecting = true;
     const ws = new WebSocket(this.options.uri);
     ws.onopen = () => {
+
+      console.log("connected");
+      /*
       this.connecting = false;
       this.ws = ws;
       this.options.onConnected?.();
@@ -71,8 +80,11 @@ class TextEditor {
       if (this.outstanding) {
         this.sendOperation(this.outstanding);
       }
+      */
     };
     ws.onclose = () => {
+      console.log("disconnected");
+      /*
       if (this.ws) {
         this.ws = undefined;
         this.options.onDisconnected?.();
@@ -85,14 +97,15 @@ class TextEditor {
       } else {
         this.connecting = false;
       }
+      */
     };
     ws.onmessage = ({ data }) => {
-      if (typeof data === "string") {
-        this.handleMessage(JSON.parse(data));
-      }
+      console.log("msg");
     };
   }
-
+}
+/*
+  
 	private serverAck() {
     if (!this.outstanding) {
       console.warn("Received serverAck with no outstanding operation.");
@@ -286,6 +299,7 @@ type ServerMsg = {
   };
 };
 /** Returns the number of Unicode codepoints in a string. */
+/*
 function unicodeLength(str: string): number {
   let length = 0;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -294,6 +308,7 @@ function unicodeLength(str: string): number {
 }
 
 /** Returns the number of Unicode codepoints before a position in the model. */
+/*
 function unicodeOffset(model: editor.ITextModel, pos: IPosition): number {
   const value = model.getValue();
   const offsetUTF16 = model.getOffsetAt(pos);
@@ -301,6 +316,7 @@ function unicodeOffset(model: editor.ITextModel, pos: IPosition): number {
 }
 
 /** Returns the position after a certain number of Unicode codepoints. */
+/*
 function unicodePosition(model: editor.ITextModel, offset: number): IPosition {
   const value = model.getValue();
   let offsetUTF16 = 0;
@@ -312,6 +328,6 @@ function unicodePosition(model: editor.ITextModel, offset: number): IPosition {
   }
   return model.getPositionAt(offsetUTF16);
 }
-
+*/
 
 export default TextEditor;
