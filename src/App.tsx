@@ -8,9 +8,10 @@ import useHash from "./useHash"
 import './App.css';
 function getWsUri(id: string) {
   return (
-    (window.location.origin.startsWith("https") ? "wss://" : "ws://") +
+    /*(window.location.origin.startsWith("https") ? "wss://" : "ws://") +
     window.location.host +
-    `/api/socket/${id}`
+    `/api/socket/${id}`*/
+    'ws://localhost:8000/chat'
   );
 }
 function App() {

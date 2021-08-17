@@ -64,10 +64,9 @@ class TextEditor {
     ws.onopen = () => {
       this.connecting = false;
       this.ws = ws;
-      this.options.onConnected?.();
       this.users = {};
-      this.options.onChangeUsers?.(this.users);
       this.sendInfo();
+      ws.send("This is a new connection");
       if (this.outstanding) {
         this.sendOperation(this.outstanding);
       }
@@ -86,11 +85,23 @@ class TextEditor {
         this.connecting = false;
       }
     };
-    ws.onmessage = ({ data }) => {
+    /*ws.onmessage = ({ data }) => {
+      console.log("hi");
       if (typeof data === "string") {
+        console.log(JSON.parse(data));
         this.handleMessage(JSON.parse(data));
       }
-    };
+    };*/
+    ws.onmessage = (msg) => {
+      console.log(msg);
+
+      if(msg.data === "This is a new connection") {
+        ws.send(this.model.getValue());
+      }
+      else if(msg.data !== this.model.getValue()) {
+      this.model.setValue(msg.data);
+      }
+    }
   }
 
 	private serverAck() {
@@ -178,9 +189,12 @@ class TextEditor {
   }
 
 	private handleMessage(msg: ServerMsg) {
+      console.log("he");
     if (msg.Identity !== undefined) {
+      console.log("hie");
       this.me = msg.Identity;
     } else if (msg.History !== undefined) {
+      console.log("hire");
       const { start, operations } = msg.History;
       if (start > this.revision) {
         console.warn("History message has start greater than last operation.");
@@ -198,8 +212,10 @@ class TextEditor {
         }
       }
     } else if (msg.Language !== undefined) {
+      console.log("s");
       this.options.onChangeLanguage?.(msg.Language);
     } else if (msg.UserInfo !== undefined) {
+      console.log("ss");
       const { id, info } = msg.UserInfo;
       if (id !== this.me) {
         this.users = { ...this.users };
@@ -214,7 +230,7 @@ class TextEditor {
   }
 
 	private onChange(event: editor.IModelContentChangedEvent) {
-		if (!this.ignoreChanges) {
+		/*if (!this.ignoreChanges) {
 			const current = this.currentValue;
 			const currentLength = unicodeLength(current);
 			let offset = 0;
@@ -243,6 +259,8 @@ class TextEditor {
       this.applyClient(currentOp);
       this.currentValue = this.model.getValue();
 			}
+      */
+      this.ws?.send(this.model.getValue());
 		}
 
 	private applyClient(op: OpSeq) {
