@@ -4,14 +4,12 @@ import { OpSeq } from "rust-wasm";
 export type Options = {
 	readonly uri: string;
 	readonly editor: editor.IStandaloneCodeEditor;
-  /*
 	readonly onConnected?: () => unknown;
   readonly onDisconnected?: () => unknown;
   readonly onDesynchronized?: () => unknown;
 	readonly onChangeLanguage?: (language: string) => unknown;
   readonly onChangeUsers?: (users: Record<number, UserInfo>) => unknown;
 	readonly reconnectInterval?: number;
-  */
 };
 
 export type UserInfo = {
@@ -23,12 +21,12 @@ class TextEditor {
 	private recentFailures: number = 0;
 	private connecting?: boolean;
 	private readonly model: editor.ITextModel;
-	//private readonly onChangeHandle: IDisposable;
-	//private readonly tryConnectId: number;
-  //private readonly resetFailuresId: number;
+	private readonly onChangeHandle: IDisposable;
+	private readonly tryConnectId: number;
+  private readonly resetFailuresId: number;
 
 
-	private currentValue: string = "";
+	private lastValue: string = "";
 	private ignoreChanges: boolean = false;
 
 	private me: number = -1;
@@ -41,7 +39,7 @@ class TextEditor {
 	constructor(readonly options: Options) {
 		this.model = options.editor.getModel()!;
     this.tryConnect();
-    /*
+
 		this.onChangeHandle = options.editor.onDidChangeModelContent((e) =>
 			this.onChange(e)
 		);
@@ -51,7 +49,6 @@ class TextEditor {
       () => (this.recentFailures = 0),
       15 * interval
     );
-    */
 	}
 
 	dispose() {
@@ -108,6 +105,88 @@ class TextEditor {
       console.log(msg.data);
     };
   }
+  	private onChange(event: editor.IModelContentChangedEvent) {
+		if (!this.ignoreChanges) {
+			const current = this.lastValue;
+			const currentLength = unicodeLength(current);
+			let offset = 0;
+
+			let currentOp = OpSeq.new();
+			currentOp.retain(currentLength);
+
+			event.changes.sort((a, b) => b.rangeOffset - a.rangeOffset);
+			for(const change of event.changes) {
+				// destructure the change
+        console.log("*****************************");
+        console.log(change);
+        console.log("*****************************");
+				const { text, rangeOffset, rangeLength } = change;
+				const initialLength = unicodeLength(current.slice(0, rangeOffset));
+				const deletedLength = unicodeLength(
+					current.slice(rangeOffset, rangeOffset + rangeLength)
+				);
+				const restLength =
+					currentLength + offset - initialLength - deletedLength;
+				const changeOp = OpSeq.new();
+				changeOp.retain(initialLength);
+        changeOp.delete(deletedLength);
+        changeOp.insert(text);
+        changeOp.retain(restLength);
+        currentOp = currentOp.compose(changeOp)!;
+        offset += changeOp.target_len() - changeOp.base_len();
+      }
+      this.applyClient(currentOp);
+      this.lastValue = this.model.getValue();
+      console.log("*****************************");
+      console.log(this.lastValue);
+      console.log("*****************************");
+      console.log(this.lastValue.length);
+      console.log("*****************************");
+			}
+		}
+	private applyClient(op: OpSeq) {
+		if (!this.outstanding) {
+			this.sendOperation(op);
+			this.outstanding = op;
+		} else if (!this.buffer) {
+			this.buffer = op;
+		} else {
+			this.buffer = this.buffer.compose(op);
+		}
+	}
+  private sendOperation(operation: OpSeq) {
+		const op = operation.to_string();
+		this.ws?.send(`{"Edit":{"revision":${this.revision},"operation":${op}}}`);
+	}
+}
+
+function unicodeLength(str: string): number {
+  let length = 0;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  for (const c of str) ++length;
+  return length;
+}
+
+/** Returns the number of Unicode codepoints before a position in the model. */
+
+function unicodeOffset(model: editor.ITextModel, pos: IPosition): number {
+  const value = model.getValue();
+  const offsetUTF16 = model.getOffsetAt(pos);
+  return unicodeLength(value.slice(0, offsetUTF16));
+}
+
+/** Returns the position after a certain number of Unicode codepoints. */
+
+function unicodePosition(model: editor.ITextModel, offset: number): IPosition {
+  const value = model.getValue();
+  let offsetUTF16 = 0;
+  for (const c of value) {
+    // Iterate over Unicode codepoints
+    if (offset <= 0) break;
+    offsetUTF16 += c.length;
+    offset -= 1;
+  }
+  return model.getPositionAt(offsetUTF16);
 }
 /*
   
@@ -191,7 +270,7 @@ class TextEditor {
         );
       }
     }
-    this.currentValue = this.model.getValue();
+    this.lastValue = this.model.getValue();
     this.ignoreChanges = false;
   }
 
@@ -233,7 +312,7 @@ class TextEditor {
 
 	private onChange(event: editor.IModelContentChangedEvent) {
 		if (!this.ignoreChanges) {
-			const current = this.currentValue;
+			const current = this.lastValue;
 			const currentLength = unicodeLength(current);
 			let offset = 0;
 
@@ -259,10 +338,10 @@ class TextEditor {
         offset += changeOp.target_len() - changeOp.base_len();
       }
       this.applyClient(currentOp);
-      this.currentValue = this.model.getValue();
+      this.lastValue = this.model.getValue();
 			}
 		}
-
+  }
 	private applyClient(op: OpSeq) {
 		if (!this.outstanding) {
 			this.sendOperation(op);
