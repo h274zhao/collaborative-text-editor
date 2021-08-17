@@ -8,8 +8,11 @@ import useHash from "./useHash"
 import './App.css';
 //TO-DO: need to do change the code to match our own server implementation
 function getWsUri(id: string) {
-  const uri = 'ws://localhost:8000/chat';
-  return uri;
+  return (
+    (window.location.origin.startsWith("https") ? "wss://" : "ws://") +
+    window.location.host +
+    `/api/socket/${id}`
+  );
 }
 
 function App() {

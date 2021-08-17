@@ -4,14 +4,12 @@ import { OpSeq } from "rust-wasm";
 export type Options = {
 	readonly uri: string;
 	readonly editor: editor.IStandaloneCodeEditor;
-  /*
 	readonly onConnected?: () => unknown;
   readonly onDisconnected?: () => unknown;
   readonly onDesynchronized?: () => unknown;
 	readonly onChangeLanguage?: (language: string) => unknown;
   readonly onChangeUsers?: (users: Record<number, UserInfo>) => unknown;
 	readonly reconnectInterval?: number;
-  */
 };
 
 export type UserInfo = {
@@ -23,9 +21,9 @@ class TextEditor {
 	private recentFailures: number = 0;
 	private connecting?: boolean;
 	private readonly model: editor.ITextModel;
-	//private readonly onChangeHandle: IDisposable;
-	//private readonly tryConnectId: number;
-  //private readonly resetFailuresId: number;
+	private readonly onChangeHandle: IDisposable;
+	private readonly tryConnectId: number;
+  private readonly resetFailuresId: number;
 
 
 	private currentValue: string = "";
@@ -41,7 +39,7 @@ class TextEditor {
 	constructor(readonly options: Options) {
 		this.model = options.editor.getModel()!;
     this.tryConnect();
-    /*
+  
 		this.onChangeHandle = options.editor.onDidChangeModelContent((e) =>
 			this.onChange(e)
 		);
@@ -51,15 +49,14 @@ class TextEditor {
       () => (this.recentFailures = 0),
       15 * interval
     );
-    */
 	}
 
 	dispose() {
-    /*
+    
     window.clearInterval(this.tryConnectId);
     window.clearInterval(this.resetFailuresId);
     this.onChangeHandle.dispose();
-    */
+  
     this.ws?.close();
   }
 
@@ -68,13 +65,13 @@ class TextEditor {
     this.connecting = true;
     const ws = new WebSocket(this.options.uri);
     ws.onopen = () => {
-
+/*
       console.log("connected");
       ws.send("msg");
       ws.send("msg1");
       ws.send("msg2");
       ws.send("msg3");
-      /*
+  */    
       this.connecting = false;
       this.ws = ws;
       this.options.onConnected?.();
@@ -84,11 +81,11 @@ class TextEditor {
       if (this.outstanding) {
         this.sendOperation(this.outstanding);
       }
-      */
+      
     };
     ws.onclose = () => {
       console.log("disconnected");
-      /*
+      
       if (this.ws) {
         this.ws = undefined;
         this.options.onDisconnected?.();
@@ -101,17 +98,39 @@ class TextEditor {
       } else {
         this.connecting = false;
       }
-      */
+      
     };
     ws.onmessage = (msg) => {
       console.log("CLIENT: msg is ::: ");
       console.log(msg.data);
     };
   }
-}
-/*
-  
-	private serverAck() {
+
+  private sendOperation(operation: OpSeq) {
+		const op = operation.to_string();
+		this.ws?.send(`{"Edit":{"revision":${this.revision},"operation":${op}}}`);
+	}
+  private handleMessage(msg: ServerMsg) { 
+    if (msg.History !== undefined) {
+      const { start, operations } = msg.History;
+      if (start > this.revision) {
+        console.warn("History message has start greater than last operation.");
+        this.ws?.close();
+        return;
+      }
+      for (let i = this.revision - start; i < operations.length; i++) {
+        let { id, operation } = operations[i];
+        this.revision++;
+        if (id === this.me) {
+          this.serverAck();
+        } else {
+          operation = OpSeq.from_str(JSON.stringify(operation));
+          this.applyServer(operation);
+        }
+      }
+    } 
+  }
+  private serverAck() {
     if (!this.outstanding) {
       console.warn("Received serverAck with no outstanding operation.");
       return;
@@ -136,8 +155,7 @@ class TextEditor {
     }
     this.applyOperation(operation);
   }
-
-	private applyOperation(operation: OpSeq) {
+  private applyOperation(operation: OpSeq) {
     if (operation.is_noop()) return;
 
     this.ignoreChanges = true;
@@ -194,42 +212,113 @@ class TextEditor {
     this.currentValue = this.model.getValue();
     this.ignoreChanges = false;
   }
+  private onChange(event: editor.IModelContentChangedEvent) {
+		if (!this.ignoreChanges) {
+			const current = this.currentValue;
+			const currentLength = unicodeLength(current);
+			let offset = 0;
 
-	private handleMessage(msg: ServerMsg) {
-    if (msg.Identity !== undefined) {
-      this.me = msg.Identity;
-    } else if (msg.History !== undefined) {
-      const { start, operations } = msg.History;
-      if (start > this.revision) {
-        console.warn("History message has start greater than last operation.");
-        this.ws?.close();
-        return;
+			let currentOp = OpSeq.new();
+			currentOp.retain(currentLength);
+
+			event.changes.sort((a, b) => b.rangeOffset - a.rangeOffset);
+			for(const change of event.changes) {
+				// destructure the change
+				const { text, rangeOffset, rangeLength } = change;
+				const initialLength = unicodeLength(current.slice(0, rangeOffset));
+				const deletedLength = unicodeLength(
+					current.slice(rangeOffset, rangeOffset + rangeLength)
+				);
+				const restLength =
+					currentLength + offset - initialLength - deletedLength;
+				const changeOp = OpSeq.new();
+				changeOp.retain(initialLength);
+        changeOp.delete(deletedLength);
+        changeOp.insert(text);
+        changeOp.retain(restLength);
+        currentOp = currentOp.compose(changeOp)!;
+        offset += changeOp.target_len() - changeOp.base_len();
       }
-      for (let i = this.revision - start; i < operations.length; i++) {
-        let { id, operation } = operations[i];
-        this.revision++;
-        if (id === this.me) {
-          this.serverAck();
-        } else {
-          operation = OpSeq.from_str(JSON.stringify(operation));
-          this.applyServer(operation);
-        }
-      }
-    } else if (msg.Language !== undefined) {
-      this.options.onChangeLanguage?.(msg.Language);
-    } else if (msg.UserInfo !== undefined) {
-      const { id, info } = msg.UserInfo;
-      if (id !== this.me) {
-        this.users = { ...this.users };
-        if (info) {
-          this.users[id] = info;
-        } else {
-          delete this.users[id];
-        }
-        this.options.onChangeUsers?.(this.users);
-      }
-    }
+      this.applyClient(currentOp);
+      this.currentValue = this.model.getValue();
+			}
+		}
+
+    
+
+	private applyClient(op: OpSeq) {
+		if (!this.outstanding) {
+			this.sendOperation(op);
+			this.outstanding = op;
+		} else if (!this.buffer) {
+			this.buffer = op;
+		} else {
+			this.buffer = this.buffer.compose(op);
+		}
+	}
+  private sendInfo() {
+		if (this.myInfo) {
+			this.ws?.send(`{"ClientInfo":${JSON.stringify(this.myInfo)}}`);
+		}
+	}
+}
+type UserOperation = {
+  id: number;
+  operation: any;
+};
+
+type CursorData = {
+  cursors: number[];
+  selections: [number, number][];
+};
+
+type ServerMsg = {
+  Identity?: number;
+  History?: {
+    start: number;
+    operations: UserOperation[];
+  };
+  Language?: string;
+  UserInfo?: {
+    id: number;
+    info: UserInfo | null;
+  };
+  UserCursor?: {
+    id: number;
+    data: CursorData;
+  };
+};
+
+function unicodeLength(str: string): number {
+  let length = 0;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  for (const c of str) ++length;
+  return length;
+}
+
+/** Returns the number of Unicode codepoints before a position in the model. */
+
+function unicodeOffset(model: editor.ITextModel, pos: IPosition): number {
+  const value = model.getValue();
+  const offsetUTF16 = model.getOffsetAt(pos);
+  return unicodeLength(value.slice(0, offsetUTF16));
+}
+
+/** Returns the position after a certain number of Unicode codepoints. */
+
+function unicodePosition(model: editor.ITextModel, offset: number): IPosition {
+  const value = model.getValue();
+  let offsetUTF16 = 0;
+  for (const c of value) {
+    // Iterate over Unicode codepoints
+    if (offset <= 0) break;
+    offsetUTF16 += c.length;
+    offset -= 1;
   }
+  return model.getPositionAt(offsetUTF16);
+}
+/*
+
 
 	private onChange(event: editor.IModelContentChangedEvent) {
 		if (!this.ignoreChanges) {
@@ -274,65 +363,7 @@ class TextEditor {
 		}
 	}
 
-	private sendOperation(operation: OpSeq) {
-		const op = operation.to_string();
-		this.ws?.send(`{"Edit":{"revision":${this.revision},"operation":${op}}}`);
-	}
 
-	private sendInfo() {
-		if (this.myInfo) {
-			this.ws?.send(`{"ClientInfo":${JSON.stringify(this.myInfo)}}`);
-		}
-	}
-}
-
-type UserOperation = {
-  id: number;
-  operation: any;
-};
-
-type ServerMsg = {
-  Identity?: number;
-  History?: {
-    start: number;
-    operations: UserOperation[];
-  };
-  Language?: string;
-  UserInfo?: {
-    id: number;
-    info: UserInfo | null;
-  };
-};
-/** Returns the number of Unicode codepoints in a string. */
-/*
-function unicodeLength(str: string): number {
-  let length = 0;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  for (const c of str) ++length;
-  return length;
-}
-
-/** Returns the number of Unicode codepoints before a position in the model. */
-/*
-function unicodeOffset(model: editor.ITextModel, pos: IPosition): number {
-  const value = model.getValue();
-  const offsetUTF16 = model.getOffsetAt(pos);
-  return unicodeLength(value.slice(0, offsetUTF16));
-}
-
-/** Returns the position after a certain number of Unicode codepoints. */
-/*
-function unicodePosition(model: editor.ITextModel, offset: number): IPosition {
-  const value = model.getValue();
-  let offsetUTF16 = 0;
-  for (const c of value) {
-    // Iterate over Unicode codepoints
-    if (offset <= 0) break;
-    offsetUTF16 += c.length;
-    offset -= 1;
-  }
-  return model.getPositionAt(offsetUTF16);
-}
 */
 
 export default TextEditor;

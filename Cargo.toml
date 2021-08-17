@@ -2,5 +2,5 @@
 
 members = [
 	"wasm",
-	"rust/warp_ws",
+	"rustpad-server",
 ]
