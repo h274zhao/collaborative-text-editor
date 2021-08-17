@@ -93,7 +93,6 @@ class TextEditor {
       }
     };*/
     ws.onmessage = (msg) => {
-      console.log(msg);
 
       if(msg.data === "This is a new connection") {
         ws.send(this.model.getValue());
@@ -260,6 +259,7 @@ class TextEditor {
       this.currentValue = this.model.getValue();
 			}
       */
+     console.log(event.changes);
       this.ws?.send(this.model.getValue());
 		}
 
