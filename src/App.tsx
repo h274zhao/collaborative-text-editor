@@ -68,6 +68,7 @@ export default function App(props: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [editor, setEditor] = useState<editor.IStandaloneCodeEditor>();
   const textEditor = useRef<TextEditor>();
+  const [userList, setUserList] = useState([]);
 
   useEffect(() => {
     if (editor?.getModel()) {
@@ -82,15 +83,15 @@ export default function App(props: Props) {
 
   useEffect(() => {
     const chat: any = document.getElementById("chat")
-    const uri: string = 'ws://localhost:8000/';
+    const uri: string = 'ws://localhost:8000/editor';
     const ws = new WebSocket(uri);
 
-    ws.onopen = function () {
+    ws.onopen = function (event) {
       chat.innerHTML = '<em> Connected</em>';
-      ws.send("My name is John");
     };
     ws.onmessage = function (event) {
-      alert(`[message] Data received from server: ${event.data}`);
+      setUserList(JSON.parse(event.data).names)
+      console.log(userList)
     };
     ws.onclose = function () {
       chat.innerHTML = '<em> Disconnected</em>';
