@@ -2,6 +2,10 @@ import { useEffect, useState, useRef } from 'react';
 import Editor from "@monaco-editor/react";
 import { editor } from "monaco-editor/esm/vs/editor/editor.api";
 import TextEditor from "./textEditor";
+import useHash from "./useHash"
+import './App.css';
+
+// MATERIAL UI
 import AppBar from '@material-ui/core/AppBar';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Divider from '@material-ui/core/Divider';
@@ -18,57 +22,27 @@ import MenuIcon from '@material-ui/icons/Menu';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import { makeStyles, useTheme, Theme, createStyles } from '@material-ui/core/styles';
-import './App.css';
 
 const drawerWidth = 240;
 
-const useStyles = makeStyles((theme: Theme) =>
-  createStyles({
-    root: {
-      display: 'flex',
-    },
-    drawer: {
-      [theme.breakpoints.up('sm')]: {
-        width: drawerWidth,
-        flexShrink: 0,
-      },
-    },
-    appBar: {
-      [theme.breakpoints.up('sm')]: {
-        width: `calc(100% - ${drawerWidth}px)`,
-        marginLeft: drawerWidth,
-      },
-    },
-    menuButton: {
-      marginRight: theme.spacing(2),
-      [theme.breakpoints.up('sm')]: {
-        display: 'none',
-      },
-    },
-    // necessary for content to be below app bar
-    toolbar: theme.mixins.toolbar,
-    drawerPaper: {
-      width: drawerWidth,
-    },
-    content: {
-      flexGrow: 1,
-      padding: theme.spacing(3),
-    },
-  }),
-);
-
-interface Props {
-  window?: () => Window;
+function getWsUri(id: string) {
+  return (
+    /*(window.location.origin.startsWith("https") ? "wss://" : "ws://") +
+    window.location.host +
+    `/api/socket/${id}`*/
+    // 'ws://localhost:8000/chat'
+    'ws://localhost:8000/editor'
+  );
 }
 
-export default function App(props: Props) {
-  const { window } = props;
+export default function App() {
   const classes = useStyles();
   const theme = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userList, setUserList] = useState([]);
   const [editor, setEditor] = useState<editor.IStandaloneCodeEditor>();
   const textEditor = useRef<TextEditor>();
-  const [userList, setUserList] = useState([]);
+  const id = useHash();
 
   useEffect(() => {
     if (editor?.getModel()) {
@@ -76,34 +50,27 @@ export default function App(props: Props) {
       model.setValue("");
       model.setEOL(0);
       textEditor.current = new TextEditor({
+        uri: getWsUri(id),
         editor,
       })
     }
   }, [editor])
 
   useEffect(() => {
-    const chat: any = document.getElementById("chat")
-    const uri: string = 'ws://localhost:8000/editor';
-    const ws = new WebSocket(uri);
+    // const chat: any = document.getElementById("chat")
+    // const uri: string = 'ws://localhost:8000/editor';
+    // const ws = new WebSocket(uri);
 
-    ws.onopen = function (event) {
-      chat.innerHTML = '<em> Connected</em>';
-    };
-    ws.onmessage = function (event) {
-      setUserList(JSON.parse(event.data).names)
-      console.log(userList)
-    };
-    ws.onclose = function () {
-      chat.innerHTML = '<em> Disconnected</em>';
-    };
-
-
-    // var input: any = document.getElementById('input');
-    // input.addEventListener('keyup', function () {
-    //   const msg = input.value;
-    //   ws.send(msg);
-    //   message(msg);
-    // });
+    // ws.onopen = function (event) {
+    //   chat.innerHTML = '<em> Connected</em>';
+    // };
+    // ws.onmessage = function (event) {
+    //   setUserList(JSON.parse(event.data).names)
+    //   console.log(userList)
+    // };
+    // ws.onclose = function () {
+    //   chat.innerHTML = '<em> Disconnected</em>';
+    // };
   })
 
   const handleDrawerToggle = () => {
@@ -134,8 +101,6 @@ export default function App(props: Props) {
     </div>
   );
 
-  const container = window !== undefined ? () => window().document.body : undefined;
-
   return (
     <div className={classes.root}>
       <CssBaseline />
@@ -162,7 +127,6 @@ export default function App(props: Props) {
         {/* The implementation can be swapped with js to avoid SEO duplication of links. */}
         <Hidden smUp implementation="css">
           <Drawer
-            container={container}
             variant="temporary"
             anchor={theme.direction === 'rtl' ? 'right' : 'left'}
             open={mobileOpen}
@@ -199,3 +163,40 @@ export default function App(props: Props) {
     </div>
   );
 }
+
+
+
+const useStyles = makeStyles((theme: Theme) =>
+  createStyles({
+    root: {
+      display: 'flex',
+    },
+    drawer: {
+      [theme.breakpoints.up('sm')]: {
+        width: drawerWidth,
+        flexShrink: 0,
+      },
+    },
+    appBar: {
+      [theme.breakpoints.up('sm')]: {
+        width: `calc(100% - ${drawerWidth}px)`,
+        marginLeft: drawerWidth,
+      },
+    },
+    menuButton: {
+      marginRight: theme.spacing(2),
+      [theme.breakpoints.up('sm')]: {
+        display: 'none',
+      },
+    },
+    // necessary for content to be below app bar
+    toolbar: theme.mixins.toolbar,
+    drawerPaper: {
+      width: drawerWidth,
+    },
+    content: {
+      flexGrow: 1,
+      padding: theme.spacing(3),
+    },
+  }),
+);
