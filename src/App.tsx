@@ -6,14 +6,12 @@ import TextEditor from "./textEditor";
 import useHash from "./useHash"
 
 import './App.css';
+//TO-DO: need to do change the code to match our own server implementation
 function getWsUri(id: string) {
-  return (
-    /*(window.location.origin.startsWith("https") ? "wss://" : "ws://") +
-    window.location.host +
-    `/api/socket/${id}`*/
-    'ws://localhost:8000/chat'
-  );
+  const uri = 'ws://localhost:8000/chat';
+  return uri;
 }
+
 function App() {
   const [editor, setEditor] = useState<editor.IStandaloneCodeEditor>();
   const textEditor = useRef<TextEditor>();

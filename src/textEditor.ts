@@ -1,5 +1,7 @@
+import { link } from "fs";
 import type { editor, IDisposable, IPosition ,} from "monaco-editor/esm/vs/editor/editor.api";
 import { OpSeq } from "rust-wasm";
+
 
 export type Options = {
 	readonly uri: string;
@@ -26,7 +28,7 @@ class TextEditor {
   private readonly resetFailuresId: number;
 
 
-	private currentValue: string = "";
+	private lastValue: string = "";
 	private ignoreChanges: boolean = false;
 
 	private me: number = -1;
@@ -37,11 +39,12 @@ class TextEditor {
 
 	constructor(readonly options: Options) {
 		this.model = options.editor.getModel()!;
+    this.tryConnect();
+
 		this.onChangeHandle = options.editor.onDidChangeModelContent((e) =>
 			this.onChange(e)
 		);
 		const interval = options.reconnectInterval ?? 1000;
-    this.tryConnect();
     this.tryConnectId = window.setInterval(() => this.tryConnect(), interval);
     this.resetFailuresId = window.setInterval(
       () => (this.recentFailures = 0),
@@ -50,9 +53,11 @@ class TextEditor {
 	}
 
 	dispose() {
+    /*
     window.clearInterval(this.tryConnectId);
     window.clearInterval(this.resetFailuresId);
     this.onChangeHandle.dispose();
+    */
     this.ws?.close();
   }
 
@@ -61,53 +66,148 @@ class TextEditor {
     this.connecting = true;
     const ws = new WebSocket(this.options.uri);
     ws.onopen = () => {
-      this.connecting = false;
+
+      console.log("connected");
       this.ws = ws;
-      this.users = {};
-      this.sendInfo();
-      ws.send("This is a new connection");
     };
     ws.onclose = () => {
-      if (this.ws) {
-        this.ws = undefined;
-        if (++this.recentFailures >= 5) {
-          // If we disconnect 5 times within 15 reconnection intervals, then the
-          // client is likely desynchronized and needs to refresh.
-          this.dispose();
-          this.options.onDesynchronized?.();
-        }
-      } else {
-        this.connecting = false;
-      }
+      console.log("disconnected");
     };
-
     ws.onmessage = (msg) => {
 
-      if(msg.data === "This is a new connection") {
-        ws.send(this.model.getValue());
+      var object = JSON.parse(msg.data);
+      if (object.operation === "") {
+        //delete
+        const operation = OpSeq.new();
+        if (object.offset == this.model.getValue().length){
+          operation.retain(object.offset);
+          operation.delete(1);
+        }
+        else if (object.offset > this.model.getValue().length){
+          console.log("werid thing happened");
+          //do nothing
+        }
+        else {
+          console.log("text length");
+          console.log(this.model.getValue().length);
+          console.log("offset");
+          console.log(object.offset);
+          
+          const txtTmp = this.model.getValue();
+          operation.retain(object.offset);
+          var index = this.model.getValue().length-object.offset;
+          operation.delete(index);
+          //operation.delete(1);
+          operation.insert(txtTmp.substring(object.offset+1));
+        }
+
+        const asd = operation.apply(this.model.getValue());
+        if (asd != null){
+          this.model.setValue(asd);
+        }
       }
-      else if(msg.data !== this.model.getValue()) {
-      this.model.setValue(msg.data);
-      this.currentValue = msg.data;
+      else {
+        //insert
+        const operation = OpSeq.new();
+
+        if (object.offset == this.model.getValue().length){
+          operation.retain(object.offset);
+          operation.insert(object.operation);
+        
+        }
+        else if (object.offset > this.model.getValue().length) {
+          console.log("werid thing happened");
+          //do nothing
+        }
+        else {
+          const txtTmp = this.model.getValue();
+          operation.retain(object.offset);
+          var index = this.model.getValue().length-object.offset;
+          operation.delete(index);
+          operation.insert(object.operation);
+          operation.insert(txtTmp.substring(object.offset));
+        }
+        const asd = operation.apply(this.model.getValue());
+        if (asd != null){
+          this.model.setValue(asd);
+        }
       }
-      this.ignoreChanges = false;
-    }
+      
+    };
   }
+  	private onChange(event: editor.IModelContentChangedEvent) {
+      if(event.isFlush){
 
-	private onChange(event: editor.IModelContentChangedEvent) {
-    if(!this.ignoreChanges) {
-      this.ignoreChanges = true;
-      console.log(event.changes);
-      this.currentValue = this.model.getValue();
-      this.ws?.send(this.currentValue);
-    }
-	}
+      }
+      else{
+        const current = this.lastValue;
+        const currentLength = unicodeLength(current);
+        let offset = 0;
+  
+        let currentOp = OpSeq.new();
+        currentOp.retain(currentLength);
+  
+        event.changes.sort((a, b) => b.rangeOffset - a.rangeOffset);
+        for(const change of event.changes) {
+          // destructure the change
+          const { text, rangeOffset, rangeLength } = change;
+          let info: opInfo = { operation: text, id: NaN, offset: rangeOffset};
+          this.ws?.send(JSON.stringify(info));
+          //this.lastValue = this.model.getValue();
+        //this.applyClient(currentOp);
+      }
 
-	private sendInfo() {
-		if (this.myInfo) {
-			this.ws?.send(`{"ClientInfo":${JSON.stringify(this.myInfo)}}`);
+
+			}
 		}
+	private applyClient(op: OpSeq) {
+		if (!this.outstanding) {
+			this.sendOperation(op);
+			this.outstanding = op;
+		} else if (!this.buffer) {
+			this.buffer = op;
+		} else {
+			this.buffer = this.buffer.compose(op);
+		}
+	}
+  private sendOperation(operation: OpSeq) {
+		const op = operation.to_string();
+		this.ws?.send(`{"Edit":{"revision":${this.revision},"operation":${op}}}`);
 	}
 }
 
+function unicodeLength(str: string): number {
+  let length = 0;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  for (const c of str) ++length;
+  return length;
+}
+
+/** Returns the number of Unicode codepoints before a position in the model. */
+
+function unicodeOffset(model: editor.ITextModel, pos: IPosition): number {
+  const value = model.getValue();
+  const offsetUTF16 = model.getOffsetAt(pos);
+  return unicodeLength(value.slice(0, offsetUTF16));
+}
+
+/** Returns the position after a certain number of Unicode codepoints. */
+
+function unicodePosition(model: editor.ITextModel, offset: number): IPosition {
+  const value = model.getValue();
+  let offsetUTF16 = 0;
+  for (const c of value) {
+    // Iterate over Unicode codepoints
+    if (offset <= 0) break;
+    offsetUTF16 += c.length;
+    offset -= 1;
+  }
+  return model.getPositionAt(offsetUTF16);
+}
+
+interface opInfo {
+  id: number;
+  operation: any;
+  offset: number;
+}
 export default TextEditor;
