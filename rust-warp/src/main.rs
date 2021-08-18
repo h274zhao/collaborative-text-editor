@@ -29,7 +29,7 @@ async fn main() {
 
     let index = warp::path::end().map(|| warp::reply::html(INDEX_HTML));
     let routes = index.or(chat);
-    warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
+    warp::serve(routes).run(([0,0,0,0], 3030)).await;
 }
 
 async fn user_connected(ws: WebSocket, users: Users) {

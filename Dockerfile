@@ -1,8 +1,6 @@
 FROM ekidd/rust-musl-builder:latest as backend
 WORKDIR /home/rust/src
 COPY . .
-RUN sudo chmod -R 777 /home/rust/src
-#RUN cargo test --release
 RUN cargo build --release
 
 FROM rust:alpine as wasm
@@ -18,8 +16,6 @@ COPY package.json package-lock.json ./
 COPY --from=wasm /home/rust/src/rust-wasm/pkg rust-wasm/pkg
 RUN npm ci
 COPY . .
-#ARG GITHUB_SHA
-#ENV REACT_APP_SHA=${GITHUB_SHA}
 RUN npm run build
 
 FROM scratch
