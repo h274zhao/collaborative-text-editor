@@ -1,6 +1,6 @@
 [workspace]
 
 members = [
-	"wasm",
-	"rust/warp_ws",
+	"rust-wasm",
+	"rust-warp",
 ]

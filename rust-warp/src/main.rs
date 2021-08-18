@@ -11,7 +11,7 @@ use warp::ws::{Message, WebSocket};
 use warp::Filter;
 
 static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
-static INDEX_HTML: &str = std::include_str!("../../../static/index.html");
+static INDEX_HTML: &str = std::include_str!("../../static/index.html");
 
 type Users = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Result<Message, warp::Error>>>>>;
 

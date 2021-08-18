@@ -1,5 +1,5 @@
 [package]
-name = "warp_ws"
+name = "rust-warp"
 version = "0.1.0"
 authors = [""]
 edition = "2018"

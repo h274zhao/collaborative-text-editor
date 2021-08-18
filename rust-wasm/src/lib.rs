@@ -9,13 +9,13 @@ use wasm_bindgen::prelude::*;
 pub mod utils;
 
 /// This is an wrapper around `operational_transform::OperationSeq`, which is
-/// necessary for Wasm compatibility through `wasm-bindgen`.
+/// necessary for Wasm compatibility through `rust-wasm-bindgen`.
 #[wasm_bindgen]
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct OpSeq(OperationSeq);
 
 /// This is a pair of `OpSeq` structs, which is needed to handle some return
-/// values from `wasm-bindgen`.
+/// values from `rust-wasm-bindgen`.
 #[wasm_bindgen]
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct OpSeqPair(OpSeq, OpSeq);
@@ -27,7 +27,7 @@ impl OpSeq {
     /// This function is the heart of OT.
     ///
     /// Unlike `OpSeq::transform`, this function returns a raw tuple, which is
-    /// more efficient but cannot be exported by `wasm-bindgen`.
+    /// more efficient but cannot be exported by `rust-wasm-bindgen`.
     ///
     /// # Error
     ///

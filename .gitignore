@@ -1,7 +1,7 @@
 /target
 pkg
-/rust/warp_ws/target
-/wasm/target
+#/rust-warp/target
+#/rust-wasm/target
 
 node_modules
 .DS_Store
