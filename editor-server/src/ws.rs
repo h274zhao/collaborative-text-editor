@@ -19,21 +19,10 @@ pub async fn user_connection(ws: WebSocket, users: Users) {
 
     let new_user = User::new(user_sender);
     let user_id = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);   //add 1 to user id, but return original
+    eprintln!("hi user: {}", user_id);
 
     users.write().await.insert(user_id.clone(), new_user);
-    let users2 = users.clone();
-
-    //Create an array of each users name
-    let mut userslist: Vec<String> = vec![];
-    for (&uid, user) in users.read().await.iter() {
-        userslist.push(user.clone().user_name);
-    }
-
-    //send all usernames to each user
-    for (&uid, user) in users.read().await.iter() {
-        user.sender.send(Ok(Message::text(
-            json!({"names": userslist}).to_string())));
-    }
+    send_user_list(&users).await;
 
     while let Some(result) = user_ws_receiver.next().await {
         let msg = match result {
@@ -45,7 +34,7 @@ pub async fn user_connection(ws: WebSocket, users: Users) {
         };
         user_message(user_id, msg, &users).await;
     }
-    user_disconnected(user_id, &users2).await;
+    user_disconnected(user_id, &users).await;
 }
 
 async fn user_message(my_id: usize, msg: Message, users: &Users) {
@@ -56,13 +45,9 @@ async fn user_message(my_id: usize, msg: Message, users: &Users) {
         return;
     };
 
-    let new_msg = format!("{}", msg);
-
     for (&uid, user) in users.read().await.iter() {
         if my_id != uid {
-            if let Err(_disconnected) = user.sender.send(Ok(Message::text(new_msg.clone()))) {
-                // nothing to do here, `user_disconnected` handles it
-            }
+           if let Err(_disconnected) = user.sender.send(Ok(Message::text(msg))) {}
         }
     }
 }
@@ -70,4 +55,21 @@ async fn user_message(my_id: usize, msg: Message, users: &Users) {
 async fn user_disconnected(my_id: usize, users: &Users) {
     eprintln!("good bye user: {}", my_id);
     users.write().await.remove(&my_id);
+
+    send_user_list(&users).await;
+}
+
+async fn send_user_list(users: &Users) {
+    //Create an array of each users name
+    let mut userslist: Vec<String> = vec![];
+    for (&uid, user) in users.read().await.iter() {
+        userslist.push(user.clone().user_name);
+    }
+
+    //send all usernames to each user
+    for (&uid, user) in users.read().await.iter() {
+        user.sender.send(Ok(Message::text(
+            json!({"users": userslist}).to_string()
+        )));
+    }
 }

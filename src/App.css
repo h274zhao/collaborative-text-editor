@@ -6,6 +6,6 @@
 
 @media (max-width: 600px) {
   .editor {
-    width: calc(100vw - 50px);
+    width: 100vw;
   }
 }

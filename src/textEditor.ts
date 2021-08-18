@@ -1,63 +1,62 @@
-import type { editor, IDisposable, IPosition ,} from "monaco-editor/esm/vs/editor/editor.api";
+import type { editor, IDisposable, IPosition, } from "monaco-editor/esm/vs/editor/editor.api";
 import { OpSeq } from "rust-wasm";
 
 export type Options = {
-	readonly uri: string;
-	readonly editor: editor.IStandaloneCodeEditor;
-	readonly onConnected?: () => unknown;
+  readonly uri: string;
+  readonly editor: editor.IStandaloneCodeEditor;
+  readonly onConnected?: () => unknown;
   readonly onDisconnected?: () => unknown;
   readonly onDesynchronized?: () => unknown;
-	readonly onChangeLanguage?: (language: string) => unknown;
+  readonly onChangeLanguage?: (language: string) => unknown;
   readonly onChangeUsers?: (users: Record<number, UserInfo>) => unknown;
-	readonly reconnectInterval?: number;
+  readonly reconnectInterval?: number;
 };
 
 export type UserInfo = {
   readonly name: string;
-  readonly hue: number;
 };
 class TextEditor {
-	private ws?: WebSocket;
-	private recentFailures: number = 0;
-	private connecting?: boolean;
-	private readonly model: editor.ITextModel;
-	private readonly onChangeHandle: IDisposable;
-	private readonly tryConnectId: number;
+  private ws?: WebSocket;
+  private recentFailures: number = 0;
+  private connecting?: boolean;
+  private readonly model: editor.ITextModel;
+  private readonly onChangeHandle: IDisposable;
+  private readonly tryConnectId: number;
   private readonly resetFailuresId: number;
 
 
-	private currentValue: string = "";
-	private ignoreChanges: boolean = false;
+  private currentValue: string = "";
+  private ignoreChanges: boolean = false;
 
-	private me: number = -1;
-	private revision: number = 0;
-	private outstanding?: OpSeq;
-	private buffer?: OpSeq;
-	private myInfo?: UserInfo;
-	private users: Record<number, UserInfo> = {};
+  private me: number = -1;
+  private revision: number = 0;
+  private outstanding?: OpSeq;
+  private buffer?: OpSeq;
+  private myInfo?: UserInfo;
+  private users: Record<number, UserInfo> = {};
 
-	constructor(readonly options: Options) {
-		this.model = options.editor.getModel()!;
-		this.onChangeHandle = options.editor.onDidChangeModelContent((e) =>
-			this.onChange(e)
-		);
-		const interval = options.reconnectInterval ?? 1000;
+  constructor(readonly options: Options) {
+    this.model = options.editor.getModel()!;
+    this.onChangeHandle = options.editor.onDidChangeModelContent((e) =>
+      this.onChange(e)
+    );
+    const interval = options.reconnectInterval ?? 1000;
     this.tryConnect();
     this.tryConnectId = window.setInterval(() => this.tryConnect(), interval);
     this.resetFailuresId = window.setInterval(
       () => (this.recentFailures = 0),
       15 * interval
     );
-	}
+  }
 
-	dispose() {
+  dispose() {
     window.clearInterval(this.tryConnectId);
     window.clearInterval(this.resetFailuresId);
     this.onChangeHandle.dispose();
     this.ws?.close();
   }
 
-	private tryConnect() {
+  private tryConnect() {
     if (this.connecting || this.ws) return;
     this.connecting = true;
     const ws = new WebSocket(this.options.uri);
@@ -92,18 +91,31 @@ class TextEditor {
         this.handleMessage(JSON.parse(data));
       }
     };*/
-    ws.onmessage = (msg) => {
+    ws.onmessage = ({ data }) => {
+      try {
+        const json = JSON.parse(data);
+        
+        json.users.forEach((user: string, i: number) => {
+          let userInfo: UserInfo = {
+            name: user
+          };
+          this.users[i] = userInfo;
+        });
 
-      if(msg.data === "This is a new connection") {
-        ws.send(this.model.getValue());
+        this.options.onChangeUsers?.(this.users);
       }
-      else if(msg.data !== this.model.getValue()) {
-      this.model.setValue(msg.data);
+      catch (e) {
+        if (data === "This is a new connection") {
+          ws.send(this.model.getValue());
+        }
+        else if (data !== this.model.getValue()) {
+          this.model.setValue(data);
+        }
       }
     }
   }
 
-	private serverAck() {
+  private serverAck() {
     if (!this.outstanding) {
       console.warn("Received serverAck with no outstanding operation.");
       return;
@@ -115,7 +127,7 @@ class TextEditor {
     }
   }
 
-	private applyServer(operation: OpSeq) {
+  private applyServer(operation: OpSeq) {
     if (this.outstanding) {
       const pair = this.outstanding.transform(operation)!;
       this.outstanding = pair.first();
@@ -129,7 +141,7 @@ class TextEditor {
     this.applyOperation(operation);
   }
 
-	private applyOperation(operation: OpSeq) {
+  private applyOperation(operation: OpSeq) {
     if (operation.is_noop()) return;
 
     this.ignoreChanges = true;
@@ -187,8 +199,8 @@ class TextEditor {
     this.ignoreChanges = false;
   }
 
-	private handleMessage(msg: ServerMsg) {
-      console.log("he");
+  private handleMessage(msg: ServerMsg) {
+    console.log("he");
     if (msg.Identity !== undefined) {
       console.log("hie");
       this.me = msg.Identity;
@@ -228,27 +240,27 @@ class TextEditor {
     }
   }
 
-	private onChange(event: editor.IModelContentChangedEvent) {
-		/*if (!this.ignoreChanges) {
-			const current = this.currentValue;
-			const currentLength = unicodeLength(current);
-			let offset = 0;
+  private onChange(event: editor.IModelContentChangedEvent) {
+    /*if (!this.ignoreChanges) {
+      const current = this.currentValue;
+      const currentLength = unicodeLength(current);
+      let offset = 0;
 
-			let currentOp = OpSeq.new();
-			currentOp.retain(currentLength);
+      let currentOp = OpSeq.new();
+      currentOp.retain(currentLength);
 
-			event.changes.sort((a, b) => b.rangeOffset - a.rangeOffset);
-			for(const change of event.changes) {
-				// destructure the change
-				const { text, rangeOffset, rangeLength } = change;
-				const initialLength = unicodeLength(current.slice(0, rangeOffset));
-				const deletedLength = unicodeLength(
-					current.slice(rangeOffset, rangeOffset + rangeLength)
-				);
-				const restLength =
-					currentLength + offset - initialLength - deletedLength;
-				const changeOp = OpSeq.new();
-				changeOp.retain(initialLength);
+      event.changes.sort((a, b) => b.rangeOffset - a.rangeOffset);
+      for(const change of event.changes) {
+        // destructure the change
+        const { text, rangeOffset, rangeLength } = change;
+        const initialLength = unicodeLength(current.slice(0, rangeOffset));
+        const deletedLength = unicodeLength(
+          current.slice(rangeOffset, rangeOffset + rangeLength)
+        );
+        const restLength =
+          currentLength + offset - initialLength - deletedLength;
+        const changeOp = OpSeq.new();
+        changeOp.retain(initialLength);
         changeOp.delete(deletedLength);
         changeOp.insert(text);
         changeOp.retain(restLength);
@@ -257,33 +269,33 @@ class TextEditor {
       }
       this.applyClient(currentOp);
       this.currentValue = this.model.getValue();
-			}
+      }
       */
-     console.log(event.changes);
-      this.ws?.send(this.model.getValue());
-		}
+    console.log(event.changes);
+    this.ws?.send(this.model.getValue());
+  }
 
-	private applyClient(op: OpSeq) {
-		if (!this.outstanding) {
-			this.sendOperation(op);
-			this.outstanding = op;
-		} else if (!this.buffer) {
-			this.buffer = op;
-		} else {
-			this.buffer = this.buffer.compose(op);
-		}
-	}
+  private applyClient(op: OpSeq) {
+    if (!this.outstanding) {
+      this.sendOperation(op);
+      this.outstanding = op;
+    } else if (!this.buffer) {
+      this.buffer = op;
+    } else {
+      this.buffer = this.buffer.compose(op);
+    }
+  }
 
-	private sendOperation(operation: OpSeq) {
-		const op = operation.to_string();
-		this.ws?.send(`{"Edit":{"revision":${this.revision},"operation":${op}}}`);
-	}
+  private sendOperation(operation: OpSeq) {
+    const op = operation.to_string();
+    this.ws?.send(`{"Edit":{"revision":${this.revision},"operation":${op}}}`);
+  }
 
-	private sendInfo() {
-		if (this.myInfo) {
-			this.ws?.send(`{"ClientInfo":${JSON.stringify(this.myInfo)}}`);
-		}
-	}
+  private sendInfo() {
+    if (this.myInfo) {
+      this.ws?.send(`{"ClientInfo":${JSON.stringify(this.myInfo)}}`);
+    }
+  }
 }
 
 type UserOperation = {
