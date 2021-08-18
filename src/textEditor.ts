@@ -30,6 +30,7 @@ class TextEditor {
 
   private me: number = -1;
   private revision: number = 0;
+  private outstanding?: OpSeq;
   private buffer?: OpSeq;
   private myInfo?: UserInfo;
   private users: Record<number, UserInfo> = {};
