@@ -85,7 +85,7 @@ async fn user_message(my_id: usize, msg: Message, users: &Users) {
     //let deserialized: opInfo = serde_json::from_str(&msg).unwrap();
     //let v = serde_json::from_str(&msg).unwrap();
     
-    eprintln!("SERVER: msg recieved by {} is {}", my_id, msg);
+    eprintln!("SERVER: msg sent by {} is {}", my_id, msg);
     for (&uid, tx) in users.read().await.iter() {
         if my_id != uid {
             if let Err(_disconnected) = tx.send(Ok(Message::text(new_msg.clone()))) {

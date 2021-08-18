@@ -1,3 +1,4 @@
+import { link } from "fs";
 import type { editor, IDisposable, IPosition ,} from "monaco-editor/esm/vs/editor/editor.api";
 import { OpSeq } from "rust-wasm";
 
@@ -89,21 +90,33 @@ class TextEditor {
       console.log("disconnected");
     };
     ws.onmessage = (msg) => {
-      /*
-      console.log("CLIENT: msg is ::: ");
-      console.log(msg.data);
-      console.log("*****************************");
-      console.log(this.lastValue);
-      console.log("*****************************");
-      */
 
       var object = JSON.parse(msg.data);
       if (object.operation === "") {
         //delete
-        console.log("welcome to delete");
         const operation = OpSeq.new();
-        operation.retain(object.offset);
-        operation.delete(1);
+        if (object.offset == this.model.getValue().length){
+          operation.retain(object.offset);
+          operation.delete(1);
+        }
+        else if (object.offset > this.model.getValue().length){
+          console.log("werid thing happened");
+          //do nothing
+        }
+        else {
+          console.log("text length");
+          console.log(this.model.getValue().length);
+          console.log("offset");
+          console.log(object.offset);
+          
+          const txtTmp = this.model.getValue();
+          operation.retain(object.offset);
+          var index = this.model.getValue().length-object.offset;
+          operation.delete(index);
+          //operation.delete(1);
+          operation.insert(txtTmp.substring(object.offset+1));
+        }
+
         const asd = operation.apply(this.model.getValue());
         if (asd != null){
           this.model.setValue(asd);
@@ -111,13 +124,25 @@ class TextEditor {
       }
       else {
         //insert
-        //this.operation.retain(this.lastValue.length);
         const operation = OpSeq.new();
-        //if(object.offset != 0){
-        operation.retain(object.offset);
-        //}
-        operation.insert(object.operation);
-        //this.operation.apply(this.lastValue);
+
+        if (object.offset == this.model.getValue().length){
+          operation.retain(object.offset);
+          operation.insert(object.operation);
+        
+        }
+        else if (object.offset > this.model.getValue().length) {
+          console.log("werid thing happened");
+          //do nothing
+        }
+        else {
+          const txtTmp = this.model.getValue();
+          operation.retain(object.offset);
+          var index = this.model.getValue().length-object.offset;
+          operation.delete(index);
+          operation.insert(object.operation);
+          operation.insert(txtTmp.substring(object.offset));
+        }
         const asd = operation.apply(this.model.getValue());
         if (asd != null){
           this.model.setValue(asd);
