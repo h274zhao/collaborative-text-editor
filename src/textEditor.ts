@@ -1,33 +1,32 @@
-import type { editor, IDisposable, IPosition ,} from "monaco-editor/esm/vs/editor/editor.api";
+import type { editor, IDisposable, IPosition, } from "monaco-editor/esm/vs/editor/editor.api";
 import { OpSeq } from "rust-wasm";
 
 export type Options = {
-	readonly uri: string;
-	readonly editor: editor.IStandaloneCodeEditor;
-	readonly onConnected?: () => unknown;
+  readonly uri: string;
+  readonly editor: editor.IStandaloneCodeEditor;
+  readonly onConnected?: () => unknown;
   readonly onDisconnected?: () => unknown;
   readonly onDesynchronized?: () => unknown;
-	readonly onChangeLanguage?: (language: string) => unknown;
+  readonly onChangeLanguage?: (language: string) => unknown;
   readonly onChangeUsers?: (users: Record<number, UserInfo>) => unknown;
-	readonly reconnectInterval?: number;
+  readonly reconnectInterval?: number;
 };
 
 export type UserInfo = {
   readonly name: string;
-  readonly hue: number;
 };
 class TextEditor {
-	private ws?: WebSocket;
-	private recentFailures: number = 0;
-	private connecting?: boolean;
-	private readonly model: editor.ITextModel;
-	private readonly onChangeHandle: IDisposable;
-	private readonly tryConnectId: number;
+  private ws?: WebSocket;
+  private recentFailures: number = 0;
+  private connecting?: boolean;
+  private readonly model: editor.ITextModel;
+  private readonly onChangeHandle: IDisposable;
+  private readonly tryConnectId: number;
   private readonly resetFailuresId: number;
 
 
-	private currentValue: string = "";
-	private ignoreChanges: boolean = false;
+  private currentValue: string = "";
+  private ignoreChanges: boolean = false;
 
 	private me: number = -1;
 	private revision: number = 0;
@@ -35,28 +34,28 @@ class TextEditor {
 	private myInfo?: UserInfo;
 	private users: Record<number, UserInfo> = {};
 
-	constructor(readonly options: Options) {
-		this.model = options.editor.getModel()!;
-		this.onChangeHandle = options.editor.onDidChangeModelContent((e) =>
-			this.onChange(e)
-		);
-		const interval = options.reconnectInterval ?? 1000;
+  constructor(readonly options: Options) {
+    this.model = options.editor.getModel()!;
+    this.onChangeHandle = options.editor.onDidChangeModelContent((e) =>
+      this.onChange(e)
+    );
+    const interval = options.reconnectInterval ?? 1000;
     this.tryConnect();
     this.tryConnectId = window.setInterval(() => this.tryConnect(), interval);
     this.resetFailuresId = window.setInterval(
       () => (this.recentFailures = 0),
       15 * interval
     );
-	}
+  }
 
-	dispose() {
+  dispose() {
     window.clearInterval(this.tryConnectId);
     window.clearInterval(this.resetFailuresId);
     this.onChangeHandle.dispose();
     this.ws?.close();
   }
 
-	private tryConnect() {
+  private tryConnect() {
     if (this.connecting || this.ws) return;
     this.connecting = true;
     const ws = new WebSocket(this.options.uri);
@@ -80,11 +79,25 @@ class TextEditor {
         this.connecting = false;
       }
     };
+    /*ws.onmessage = ({ data }) => {
+      console.log("hi");
+      if (typeof data === "string") {
+        console.log(JSON.parse(data));
+        this.handleMessage(JSON.parse(data));
+      }
+    };*/
+    ws.onmessage = ({ data }) => {
+      try {
+        const json = JSON.parse(data);
+        
+        json.users.forEach((user: string, i: number) => {
+          let userInfo: UserInfo = {
+            name: user
+          };
+          this.users[i] = userInfo;
+        });
 
-    ws.onmessage = (msg) => {
-
-      if(msg.data === "This is a new connection") {
-        ws.send(this.model.getValue());
+        this.options.onChangeUsers?.(this.users);
       }
       else if(msg.data !== this.model.getValue()) {
       this.model.setValue(msg.data);
@@ -103,11 +116,11 @@ class TextEditor {
     }
 	}
 
-	private sendInfo() {
-		if (this.myInfo) {
-			this.ws?.send(`{"ClientInfo":${JSON.stringify(this.myInfo)}}`);
-		}
-	}
+  private sendInfo() {
+    if (this.myInfo) {
+      this.ws?.send(`{"ClientInfo":${JSON.stringify(this.myInfo)}}`);
+    }
+  }
 }
 
 export default TextEditor;
