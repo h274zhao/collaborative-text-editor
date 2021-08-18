@@ -1,0 +1,9 @@
+body {
+  overscroll-behavior: none;
+}
+
+.editor {
+  display: flex;
+  flex: 1;
+  height: 100vh;
+}
