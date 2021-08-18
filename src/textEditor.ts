@@ -141,11 +141,9 @@ class TextEditor {
       }
       else{
         const current = this.lastValue;
-        const currentLength = unicodeLength(current);
         let offset = 0;
   
         let currentOp = OpSeq.new();
-        currentOp.retain(currentLength);
   
         event.changes.sort((a, b) => b.rangeOffset - a.rangeOffset);
         for(const change of event.changes) {
@@ -160,50 +158,8 @@ class TextEditor {
 
 			}
 		}
-	private applyClient(op: OpSeq) {
-		if (!this.outstanding) {
-			this.sendOperation(op);
-			this.outstanding = op;
-		} else if (!this.buffer) {
-			this.buffer = op;
-		} else {
-			this.buffer = this.buffer.compose(op);
-		}
-	}
-  private sendOperation(operation: OpSeq) {
-		const op = operation.to_string();
-		this.ws?.send(`{"Edit":{"revision":${this.revision},"operation":${op}}}`);
-	}
 }
 
-function unicodeLength(str: string): number {
-  let length = 0;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  for (const c of str) ++length;
-  return length;
-}
-
-/** Returns the number of Unicode codepoints before a position in the model. */
-
-function unicodeOffset(model: editor.ITextModel, pos: IPosition): number {
-  const value = model.getValue();
-  const offsetUTF16 = model.getOffsetAt(pos);
-  return unicodeLength(value.slice(0, offsetUTF16));
-}
-
-/** Returns the position after a certain number of Unicode codepoints. */
-
-function unicodePosition(model: editor.ITextModel, offset: number): IPosition {
-  const value = model.getValue();
-  let offsetUTF16 = 0;
-  for (const c of value) {
-    // Iterate over Unicode codepoints
-    if (offset <= 0) break;
-    offsetUTF16 += c.length;
-    offset -= 1;
-  }
-  return model.getPositionAt(offsetUTF16);
-}
 
 interface opInfo {
   id: number;
