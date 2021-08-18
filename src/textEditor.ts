@@ -31,7 +31,6 @@ class TextEditor {
 
 	private me: number = -1;
 	private revision: number = 0;
-	private outstanding?: OpSeq;
 	private buffer?: OpSeq;
 	private myInfo?: UserInfo;
 	private users: Record<number, UserInfo> = {};
@@ -67,9 +66,6 @@ class TextEditor {
       this.users = {};
       this.sendInfo();
       ws.send("This is a new connection");
-      if (this.outstanding) {
-        this.sendOperation(this.outstanding);
-      }
     };
     ws.onclose = () => {
       if (this.ws) {
@@ -92,6 +88,7 @@ class TextEditor {
       }
       else if(msg.data !== this.model.getValue()) {
       this.model.setValue(msg.data);
+      this.currentValue = msg.data;
       }
       this.ignoreChanges = false;
     }
@@ -101,13 +98,9 @@ class TextEditor {
     if(!this.ignoreChanges) {
       this.ignoreChanges = true;
       console.log(event.changes);
-      this.ws?.send(this.model.getValue());
+      this.currentValue = this.model.getValue();
+      this.ws?.send(this.currentValue);
     }
-	}
-
-	private sendOperation(operation: OpSeq) {
-		const op = operation.to_string();
-		this.ws?.send(`{"Edit":{"revision":${this.revision},"operation":${op}}}`);
 	}
 
 	private sendInfo() {
