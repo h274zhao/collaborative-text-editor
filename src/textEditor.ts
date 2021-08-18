@@ -1,6 +1,7 @@
 import type { editor, IDisposable, IPosition ,} from "monaco-editor/esm/vs/editor/editor.api";
 import { OpSeq } from "rust-wasm";
 
+
 export type Options = {
 	readonly uri: string;
 	readonly editor: editor.IStandaloneCodeEditor;
@@ -25,7 +26,7 @@ class TextEditor {
 	private readonly tryConnectId: number;
   private readonly resetFailuresId: number;
 
-
+  private operation = OpSeq.new();
 	private lastValue: string = "";
 	private ignoreChanges: boolean = false;
 
@@ -67,13 +68,14 @@ class TextEditor {
     ws.onopen = () => {
 
       console.log("connected");
-      ws.send("msg");
-      ws.send("msg1");
-      ws.send("msg2");
-      ws.send("msg3");
+      this.ws = ws;
+      //ws.send("msg");
+      //ws.send("msg1");
+      //ws.send("msg2");
+      //ws.send("msg3");
       /*
       this.connecting = false;
-      this.ws = ws;
+
       this.options.onConnected?.();
       this.users = {};
       this.options.onChangeUsers?.(this.users);
@@ -85,24 +87,38 @@ class TextEditor {
     };
     ws.onclose = () => {
       console.log("disconnected");
-      /*
-      if (this.ws) {
-        this.ws = undefined;
-        this.options.onDisconnected?.();
-        if (++this.recentFailures >= 5) {
-          // If we disconnect 5 times within 15 reconnection intervals, then the
-          // client is likely desynchronized and needs to refresh.
-          this.dispose();
-          this.options.onDesynchronized?.();
-        }
-      } else {
-        this.connecting = false;
-      }
-      */
     };
     ws.onmessage = (msg) => {
+      /*
       console.log("CLIENT: msg is ::: ");
       console.log(msg.data);
+      console.log("*****************************");
+      console.log(this.lastValue);
+      console.log("*****************************");
+      */
+
+      var object = JSON.parse(msg.data);
+      if (object.operation === "") {
+        //delete
+        this.operation.delete(object.offset);
+        const asd = this.operation.apply(this.lastValue);
+        if (asd != null){
+          this.model.setValue(asd);
+        }
+      }
+      else {
+        //insert
+        //this.operation.retain(this.lastValue.length);
+        this.operation.insert(object.operation);
+        //this.operation.apply(this.lastValue);
+        const asd = this.operation.apply(this.lastValue);
+        console.log("why this is not working");
+        console.log(asd);
+        if (asd != null){
+          this.model.setValue(asd);
+        }
+      }
+      
     };
   }
   	private onChange(event: editor.IModelContentChangedEvent) {
@@ -117,10 +133,12 @@ class TextEditor {
 			event.changes.sort((a, b) => b.rangeOffset - a.rangeOffset);
 			for(const change of event.changes) {
 				// destructure the change
+
         console.log("*****************************");
         console.log(change);
         console.log("*****************************");
 				const { text, rangeOffset, rangeLength } = change;
+        let info: opInfo = { operation: text, id: NaN, offset: rangeOffset};
 				const initialLength = unicodeLength(current.slice(0, rangeOffset));
 				const deletedLength = unicodeLength(
 					current.slice(rangeOffset, rangeOffset + rangeLength)
@@ -130,18 +148,17 @@ class TextEditor {
 				const changeOp = OpSeq.new();
 				changeOp.retain(initialLength);
         changeOp.delete(deletedLength);
+
+
         changeOp.insert(text);
         changeOp.retain(restLength);
         currentOp = currentOp.compose(changeOp)!;
         offset += changeOp.target_len() - changeOp.base_len();
+        this.ws?.send(JSON.stringify(info));
       }
-      this.applyClient(currentOp);
+      //this.applyClient(currentOp);
       this.lastValue = this.model.getValue();
-      console.log("*****************************");
-      console.log(this.lastValue);
-      console.log("*****************************");
-      console.log(this.lastValue.length);
-      console.log("*****************************");
+
 			}
 		}
 	private applyClient(op: OpSeq) {
@@ -187,6 +204,12 @@ function unicodePosition(model: editor.ITextModel, offset: number): IPosition {
     offset -= 1;
   }
   return model.getPositionAt(offsetUTF16);
+}
+
+interface opInfo {
+  id: number;
+  operation: any;
+  offset: number;
 }
 /*
   

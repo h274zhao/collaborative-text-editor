@@ -10,6 +10,8 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
 use warp::Filter;
 
+use serde::{Deserialize, Serialize};
+
 static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
 static INDEX_HTML: &str = std::include_str!("../../../static/index.html");
 
@@ -32,9 +34,14 @@ async fn main() {
     warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
 }
 
+
+struct opInfo {
+    operation: String,
+    id: i32,
+    offset: i32
+}
 async fn user_connected(ws: WebSocket, users: Users) {
     let my_id = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);
-
     eprintln!("new chat user: {}", my_id);
 
     let (user_ws_tx, mut user_ws_rx) = ws.split();
@@ -75,6 +82,9 @@ async fn user_message(my_id: usize, msg: Message, users: &Users) {
     };
 
     let new_msg = format!("{}", msg);
+    //let deserialized: opInfo = serde_json::from_str(&msg).unwrap();
+    //let v = serde_json::from_str(&msg).unwrap();
+    
     eprintln!("SERVER: msg recieved by {} is {}", my_id, msg);
     for (&uid, tx) in users.read().await.iter() {
         if my_id != uid {
