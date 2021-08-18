@@ -3,4 +3,5 @@
 members = [
 	"wasm",
 	"rust/warp_ws",
+  "editor-server"
 ]

@@ -104,6 +104,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "editor-server"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "names",
+ "serde 1.0.127",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "uuid",
+ "warp",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -118,6 +132,12 @@ dependencies = [
  "matches",
  "percent-encoding",
 ]
+
+[[package]]
+name = "fuchsia-cprng"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a06f77d526c1a601b7c4cdd98f54b5eaabffc14d5f2f0296febdc7f357c6d3ba"
 
 [[package]]
 name = "futures"
@@ -497,6 +517,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "names"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef320dab323286b50fb5cdda23f61c796a72a89998ab565ca32525c5c556f2da"
+dependencies = [
+ "rand 0.3.23",
+]
+
+[[package]]
 name = "ntapi"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -528,7 +557,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57b31bc8699a7bd5e43f63cfa9a1e48e2330cdf27f533370d5640fef63ab6910"
 dependencies = [
  "bytecount",
- "serde",
+ "serde 1.0.127",
 ]
 
 [[package]]
@@ -613,6 +642,29 @@ dependencies = [
 
 [[package]]
 name = "rand"
+version = "0.3.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64ac302d8f83c0c1974bf758f6b041c6c8ada916fbb44a609158ca8b064cc76c"
+dependencies = [
+ "libc",
+ "rand 0.4.6",
+]
+
+[[package]]
+name = "rand"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "552840b97013b1a26992c11eac34bdd778e464601a4c2054b5f0bff7c6761293"
+dependencies = [
+ "fuchsia-cprng",
+ "libc",
+ "rand_core 0.3.1",
+ "rdrand",
+ "winapi",
+]
+
+[[package]]
+name = "rand"
 version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a6b1679d49b24bbfe0c803429aa1874472f50d9b363131f0e89fc356b544d03"
@@ -658,6 +710,21 @@ dependencies = [
 
 [[package]]
 name = "rand_core"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a6fdeb83b075e8266dcc8762c22776f6877a63111121f5f8c7411e5be7eed4b"
+dependencies = [
+ "rand_core 0.4.2",
+]
+
+[[package]]
+name = "rand_core"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c33a3c44ca05fa6f1807d8e6743f3824e8509beca625669633be0acbdf509dc"
+
+[[package]]
+name = "rand_core"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90bde5296fc891b0cef12a6d03ddccc162ce7b2aff54160af9338f8d40df6d19"
@@ -690,6 +757,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d51e9f596de227fda2ea6c84607f5558e196eeaf43c986b724ba4fb8fdf497e7"
 dependencies = [
  "rand_core 0.6.3",
+]
+
+[[package]]
+name = "rdrand"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "678054eb77286b51581ba43620cc911abf02758c91f93f479767aed0f90458b2"
+dependencies = [
+ "rand_core 0.3.1",
 ]
 
 [[package]]
@@ -730,6 +806,12 @@ checksum = "ea6a9290e3c9cf0f18145ef7ffa62d68ee0bf5fcd651017e586dc7fd5da448c2"
 
 [[package]]
 name = "serde"
+version = "0.9.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34b623917345a631dc9608d5194cc206b3fe6c3554cd1c75b937e55e285254af"
+
+[[package]]
+name = "serde"
 version = "1.0.127"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f03b9878abf6d14e6779d3f24f07b2cfa90352cfec4acc5aab8f1ac7f146fae8"
@@ -756,7 +838,7 @@ checksum = "336b10da19a12ad094b59d870ebde26a45402e5b470add4b5fd03c5048a32127"
 dependencies = [
  "itoa",
  "ryu",
- "serde",
+ "serde 1.0.127",
 ]
 
 [[package]]
@@ -768,7 +850,7 @@ dependencies = [
  "form_urlencoded",
  "itoa",
  "ryu",
- "serde",
+ "serde 1.0.127",
 ]
 
 [[package]]
@@ -1032,6 +1114,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09cc8ee72d2a9becf2f2febe0205bbed8fc6615b7cb429ad062dc7b7ddd036a9"
 
 [[package]]
+name = "uuid"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cfec50b0842181ba6e713151b72f4ec84a6a7e2c9c8a8a3ffc37bb1cd16b231"
+dependencies = [
+ "rand 0.3.23",
+ "serde 0.9.15",
+]
+
+[[package]]
 name = "version_check"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1065,7 +1157,7 @@ dependencies = [
  "percent-encoding",
  "pin-project",
  "scoped-tls",
- "serde",
+ "serde 1.0.127",
  "serde_json",
  "serde_urlencoded",
  "tokio",
@@ -1106,7 +1198,7 @@ dependencies = [
  "console_error_panic_hook",
  "js-sys",
  "operational-transform",
- "serde",
+ "serde 1.0.127",
  "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-test",
