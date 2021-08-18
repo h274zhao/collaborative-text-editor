@@ -26,7 +26,7 @@ class TextEditor {
 	private readonly tryConnectId: number;
   private readonly resetFailuresId: number;
 
-  private operation = OpSeq.new();
+
 	private lastValue: string = "";
 	private ignoreChanges: boolean = false;
 
@@ -100,8 +100,11 @@ class TextEditor {
       var object = JSON.parse(msg.data);
       if (object.operation === "") {
         //delete
-        this.operation.delete(object.offset);
-        const asd = this.operation.apply(this.lastValue);
+        console.log("welcome to delete");
+        const operation = OpSeq.new();
+        operation.retain(object.offset);
+        operation.delete(1);
+        const asd = operation.apply(this.model.getValue());
         if (asd != null){
           this.model.setValue(asd);
         }
@@ -109,11 +112,13 @@ class TextEditor {
       else {
         //insert
         //this.operation.retain(this.lastValue.length);
-        this.operation.insert(object.operation);
+        const operation = OpSeq.new();
+        //if(object.offset != 0){
+        operation.retain(object.offset);
+        //}
+        operation.insert(object.operation);
         //this.operation.apply(this.lastValue);
-        const asd = this.operation.apply(this.lastValue);
-        console.log("why this is not working");
-        console.log(asd);
+        const asd = operation.apply(this.model.getValue());
         if (asd != null){
           this.model.setValue(asd);
         }
@@ -122,42 +127,27 @@ class TextEditor {
     };
   }
   	private onChange(event: editor.IModelContentChangedEvent) {
-		if (!this.ignoreChanges) {
-			const current = this.lastValue;
-			const currentLength = unicodeLength(current);
-			let offset = 0;
+      if(event.isFlush){
 
-			let currentOp = OpSeq.new();
-			currentOp.retain(currentLength);
-
-			event.changes.sort((a, b) => b.rangeOffset - a.rangeOffset);
-			for(const change of event.changes) {
-				// destructure the change
-
-        console.log("*****************************");
-        console.log(change);
-        console.log("*****************************");
-				const { text, rangeOffset, rangeLength } = change;
-        let info: opInfo = { operation: text, id: NaN, offset: rangeOffset};
-				const initialLength = unicodeLength(current.slice(0, rangeOffset));
-				const deletedLength = unicodeLength(
-					current.slice(rangeOffset, rangeOffset + rangeLength)
-				);
-				const restLength =
-					currentLength + offset - initialLength - deletedLength;
-				const changeOp = OpSeq.new();
-				changeOp.retain(initialLength);
-        changeOp.delete(deletedLength);
-
-
-        changeOp.insert(text);
-        changeOp.retain(restLength);
-        currentOp = currentOp.compose(changeOp)!;
-        offset += changeOp.target_len() - changeOp.base_len();
-        this.ws?.send(JSON.stringify(info));
       }
-      //this.applyClient(currentOp);
-      this.lastValue = this.model.getValue();
+      else{
+        const current = this.lastValue;
+        const currentLength = unicodeLength(current);
+        let offset = 0;
+  
+        let currentOp = OpSeq.new();
+        currentOp.retain(currentLength);
+  
+        event.changes.sort((a, b) => b.rangeOffset - a.rangeOffset);
+        for(const change of event.changes) {
+          // destructure the change
+          const { text, rangeOffset, rangeLength } = change;
+          let info: opInfo = { operation: text, id: NaN, offset: rangeOffset};
+          this.ws?.send(JSON.stringify(info));
+          //this.lastValue = this.model.getValue();
+        //this.applyClient(currentOp);
+      }
+
 
 			}
 		}
