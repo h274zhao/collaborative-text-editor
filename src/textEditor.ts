@@ -87,8 +87,10 @@ class TextEditor {
         ws.send(this.model.getValue());
       }
       else if(msg.data !== this.model.getValue()) {
-      this.model.setValue(msg.data);
-      this.currentValue = msg.data;
+        const position: any = this.options.editor?.getPosition();
+        this.model.setValue(msg.data);
+        this.options.editor?.setPosition(position);
+        this.currentValue = msg.data;
       }
       this.ignoreChanges = false;
     }
@@ -97,7 +99,6 @@ class TextEditor {
 	private onChange(event: editor.IModelContentChangedEvent) {
     if(!this.ignoreChanges) {
       this.ignoreChanges = true;
-      console.log(event.changes);
       this.currentValue = this.model.getValue();
       this.ws?.send(this.currentValue);
     }

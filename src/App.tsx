@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-import logo from './logo.svg';
 import Editor from "@monaco-editor/react";
 import { editor } from "monaco-editor/esm/vs/editor/editor.api";
 import TextEditor from "./textEditor";
