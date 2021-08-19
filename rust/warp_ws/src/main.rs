@@ -13,7 +13,7 @@ use warp::Filter;
 use serde::{Deserialize, Serialize};
 
 static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
-static INDEX_HTML: &str = std::include_str!("../../../static/index.html");
+//static INDEX_HTML: &str = std::include_str!("../../../static/index.html");
 
 type Users = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Result<Message, warp::Error>>>>>;
 
@@ -29,8 +29,8 @@ async fn main() {
             ws.on_upgrade(move |socket| user_connected(socket, users))
         });
 
-    let index = warp::path::end().map(|| warp::reply::html(INDEX_HTML));
-    let routes = index.or(chat);
+    //let index = warp::path::end().map(|| warp::reply::html(INDEX_HTML));
+    let routes = chat;
     warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
 }
 
