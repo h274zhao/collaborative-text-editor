@@ -1,5 +1,7 @@
+import { link } from "fs";
 import type { editor, IDisposable, IPosition, } from "monaco-editor/esm/vs/editor/editor.api";
 import { OpSeq } from "rust-wasm";
+
 
 export type Options = {
   readonly uri: string;
@@ -27,6 +29,7 @@ class TextEditor {
 
   private currentValue: string = "";
   private ignoreChanges: boolean = false;
+  private lastValue: string = "";
 
   private me: number = -1;
   private revision: number = 0;
@@ -37,11 +40,12 @@ class TextEditor {
 
   constructor(readonly options: Options) {
     this.model = options.editor.getModel()!;
+    this.tryConnect();
+
     this.onChangeHandle = options.editor.onDidChangeModelContent((e) =>
       this.onChange(e)
     );
     const interval = options.reconnectInterval ?? 1000;
-    this.tryConnect();
     this.tryConnectId = window.setInterval(() => this.tryConnect(), interval);
     this.resetFailuresId = window.setInterval(
       () => (this.recentFailures = 0),
@@ -50,9 +54,11 @@ class TextEditor {
   }
 
   dispose() {
+    /*
     window.clearInterval(this.tryConnectId);
     window.clearInterval(this.resetFailuresId);
     this.onChangeHandle.dispose();
+    */
     this.ws?.close();
   }
 
@@ -61,27 +67,30 @@ class TextEditor {
     this.connecting = true;
     const ws = new WebSocket(this.options.uri);
     ws.onopen = () => {
-      this.connecting = false;
+      console.log("connected");
       this.ws = ws;
-      this.sendInfo();
-      ws.send("This is a new connection");
     };
     ws.onclose = () => {
-      if (this.ws) {
-        this.ws = undefined;
-        if (++this.recentFailures >= 5) {
-          // If we disconnect 5 times within 15 reconnection intervals, then the
-          // client is likely desynchronized and needs to refresh.
-          this.dispose();
-          this.options.onDesynchronized?.();
-        }
-      } else {
-        this.connecting = false;
-      }
+      console.log("disconnected");
     };
+
+    // try {
+
+
+    // }
+    // catch (e) {
+    //   if (data === "This is a new connection") {
+    //     ws.send(this.model.getValue());
+    //   }
+    //   else if (data !== this.model.getValue()) {
+    //     this.model.setValue(data);
+
+
     ws.onmessage = ({ data }) => {
-      try {
-        const json = JSON.parse(data);
+
+      const json = JSON.parse(data);
+
+      if (json.users) {
         this.users = {}
         json.users.forEach((user: string, i: number) => {
           let userInfo: UserInfo = {
@@ -92,33 +101,101 @@ class TextEditor {
         console.log(this.users)
         this.options.onChangeUsers?.(this.users);
       }
-      catch (e) {
-        if (data === "This is a new connection") {
-          ws.send(this.model.getValue());
+      else {
+        if (json.operation === "") {
+          //delete
+          const operation = OpSeq.new();
+          if (json.offset == this.model.getValue().length) {
+            operation.retain(json.offset);
+            operation.delete(1);
+          }
+          else if (json.offset > this.model.getValue().length) {
+            console.log("werid thing happened");
+            //do nothing
+          }
+          else {
+            console.log("text length");
+            console.log(this.model.getValue().length);
+            console.log("offset");
+            console.log(json.offset);
+
+            const txtTmp = this.model.getValue();
+            operation.retain(json.offset);
+            var index = this.model.getValue().length - json.offset;
+            operation.delete(index);
+            //operation.delete(1);
+            operation.insert(txtTmp.substring(json.offset + 1));
+          }
+
+          const asd = operation.apply(this.model.getValue());
+          if (asd != null) {
+            this.model.setValue(asd);
+          }
         }
-        else if (data !== this.model.getValue()) {
-          this.model.setValue(data);
+        else {
+          //insert
+          const operation = OpSeq.new();
+
+          if (json.offset == this.model.getValue().length) {
+            operation.retain(json.offset);
+            operation.insert(json.operation);
+
+          }
+          else if (json.offset > this.model.getValue().length) {
+            console.log("werid thing happened");
+            //do nothing
+          }
+          else {
+            const txtTmp = this.model.getValue();
+            operation.retain(json.offset);
+            var index = this.model.getValue().length - json.offset;
+            operation.delete(index);
+            operation.insert(json.operation);
+            operation.insert(txtTmp.substring(json.offset));
+          }
+          const asd = operation.apply(this.model.getValue());
+          if (asd != null) {
+            this.model.setValue(asd);
+          }
         }
       }
-      this.ignoreChanges = false;
-    }
+
+
+
+
+
+
+    };
   }
-
-
   private onChange(event: editor.IModelContentChangedEvent) {
-    if (!this.ignoreChanges) {
-      this.ignoreChanges = true;
-      console.log(event.changes);
-      this.currentValue = this.model.getValue();
-      this.ws?.send(this.currentValue);
-    }
-  }
+    if (event.isFlush) {
 
-  private sendInfo() {
-    if (this.myInfo) {
-      this.ws?.send(`{"ClientInfo":${JSON.stringify(this.myInfo)}}`);
+    }
+    else {
+      const current = this.lastValue;
+      let offset = 0;
+
+      let currentOp = OpSeq.new();
+
+      event.changes.sort((a, b) => b.rangeOffset - a.rangeOffset);
+      for (const change of event.changes) {
+        // destructure the change
+        const { text, rangeOffset, rangeLength } = change;
+        let info: opInfo = { operation: text, id: NaN, offset: rangeOffset };
+        this.ws?.send(JSON.stringify(info));
+        //this.lastValue = this.model.getValue();
+        //this.applyClient(currentOp);
+      }
+
+
     }
   }
 }
 
+
+interface opInfo {
+  id: number;
+  operation: any;
+  offset: number;
+}
 export default TextEditor;

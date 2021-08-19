@@ -21,9 +21,8 @@
         const ws = new WebSocket(uri);
         //const line = document.createElement('p');
         function message(data) {
-
             input.value = data;
-            chat.appendChild(line);
+            //chat.appendChild(line);
         }
         ws.onopen = function() {
             chat.innerHTML = '<p><em>Connected!</em></p>';

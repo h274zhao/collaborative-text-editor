@@ -1173,6 +1173,8 @@ name = "warp_ws"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "serde 1.0.127",
+ "serde_json",
  "tokio",
  "tokio-stream",
  "warp",
