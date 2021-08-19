@@ -1,12 +1,12 @@
 use warp::ws::{WebSocket, Message};
-use crate::{Users, NEXT_USER_ID, User};
+use crate::{Users, NEXT_USER_ID, User, Rooms, Room};
 use std::sync::atomic::Ordering;
 use tokio::sync::mpsc;
 use futures::{FutureExt, StreamExt};                        //FutureExt needed or u get "trait bounds were not satisfied"
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use serde_json::json;
 
-pub async fn user_connection(ws: WebSocket, users: Users) {
+pub async fn user_connection(ws: WebSocket, _room_name: String, room_uuid: String, rooms: Rooms) {
     let (user_ws_sender, mut user_ws_receiver) = ws.split();
     let (user_sender, user_receiver) = mpsc::unbounded_channel();
     let user_receiver = UnboundedReceiverStream::new(user_receiver);
@@ -18,8 +18,15 @@ pub async fn user_connection(ws: WebSocket, users: Users) {
     }));
 
     let new_user = User::new(user_sender);
-    let user_id = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);   //add 1 to user id, but return original
+    let user_id = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);
     eprintln!("hi user: {}", user_id);
+
+    let room = match rooms.read().await.get(room_uuid.as_str()) {
+        Some(room) => room.clone(),
+        None => Room::new("default".to_string(), "default".to_string())
+    };
+
+    let mut users: Users = room.users;
 
     users.write().await.insert(user_id.clone(), new_user);
     send_user_list(&users).await;
@@ -34,7 +41,7 @@ pub async fn user_connection(ws: WebSocket, users: Users) {
         };
         user_message(user_id, msg, &users).await;
     }
-    user_disconnected(user_id, &users).await;
+    user_disconnected(user_id, &mut users).await;
 }
 
 async fn user_message(my_id: usize, msg: Message, users: &Users) {
@@ -52,7 +59,7 @@ async fn user_message(my_id: usize, msg: Message, users: &Users) {
     }
 }
 
-async fn user_disconnected(my_id: usize, users: &Users) {
+async fn user_disconnected(my_id: usize, users: &mut Users) {
     eprintln!("good bye user: {}", my_id);
     users.write().await.remove(&my_id);
 
@@ -62,14 +69,14 @@ async fn user_disconnected(my_id: usize, users: &Users) {
 async fn send_user_list(users: &Users) {
     //Create an array of each users name
     let mut userslist: Vec<String> = vec![];
-    for (&uid, user) in users.read().await.iter() {
+    for (&_uid, user) in users.read().await.iter() {
         userslist.push(user.clone().user_name);
     }
 
     //send all usernames to each user
-    for (&uid, user) in users.read().await.iter() {
-        user.sender.send(Ok(Message::text(
-            json!({"users": userslist}).to_string()
-        )));
+    for (&_uid, user) in users.read().await.iter() {
+        user.sender.send(
+            Ok(Message::text(json!({"users": userslist}).to_string()))
+        );
     }
 }
