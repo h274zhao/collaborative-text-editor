@@ -1,9 +1,4 @@
 body {
-  overscroll-behavior: none;
+  margin: 0px;
 }
 
-.editor {
-  display: flex;
-  flex: 1;
-  height: 100vh;
-}
