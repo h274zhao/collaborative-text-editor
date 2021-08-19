@@ -1,6 +1,6 @@
 import { link } from "fs";
 import type { editor, IDisposable, IPosition, } from "monaco-editor/esm/vs/editor/editor.api";
-import { OpSeq } from "rust-wasm";
+import { OpSeq, OpSeqPair } from "rust-wasm";
 
 
 export type Options = {
@@ -9,6 +9,7 @@ export type Options = {
   readonly onConnected?: () => unknown;
   readonly onDisconnected?: () => unknown;
   readonly onDesynchronized?: () => unknown;
+
   readonly onChangeLanguage?: (language: string) => unknown;
   readonly onChangeUsers?: (users: Record<number, UserInfo>) => unknown;
   readonly reconnectInterval?: number;
@@ -25,15 +26,12 @@ class TextEditor {
   private readonly onChangeHandle: IDisposable;
   private readonly tryConnectId: number;
   private readonly resetFailuresId: number;
-
-
+  private prevOp: OpSeq = OpSeq.new();
   private currentValue: string = "";
   private ignoreChanges: boolean = false;
   private lastValue: string = "";
-
+  private version: number = 0;
   private me: number = -1;
-  private revision: number = 0;
-  private outstanding?: OpSeq;
   private buffer?: OpSeq;
   private myInfo?: UserInfo;
   private users: Record<number, UserInfo> = {};
@@ -89,7 +87,6 @@ class TextEditor {
     ws.onmessage = ({ data }) => {
 
       const json = JSON.parse(data);
-
       if (json.users) {
         this.users = {}
         json.users.forEach((user: string, i: number) => {
@@ -102,76 +99,93 @@ class TextEditor {
         this.options.onChangeUsers?.(this.users);
       }
       else {
-        if (json.operation === "") {
-          //delete
-          const operation = OpSeq.new();
-          if (json.offset == this.model.getValue().length) {
-            operation.retain(json.offset);
-            operation.delete(1);
-          }
-          else if (json.offset > this.model.getValue().length) {
-            console.log("werid thing happened");
-            //do nothing
-          }
-          else {
-            console.log("text length");
-            console.log(this.model.getValue().length);
-            console.log("offset");
-            console.log(json.offset);
 
-            const txtTmp = this.model.getValue();
-            operation.retain(json.offset);
-            var index = this.model.getValue().length - json.offset;
-            operation.delete(index);
-            //operation.delete(1);
-            operation.insert(txtTmp.substring(json.offset + 1));
-          }
+        if (json.version == this.version) {
+          console.log("racing condition");
+          //racing condition
+          const curOperation = this.operation(data);
+          //transform between preOp and curOperation
+          const pair = this.prevOp.transform(curOperation)!;
 
-          const asd = operation.apply(this.model.getValue());
+          const buffer = this.prevOp.compose(pair.second());
+          if(buffer){
+            var asd = buffer.apply(this.model.getValue());
+          }
           if (asd != null) {
             this.model.setValue(asd);
           }
         }
+        else if (json.version < this.version) {
+          console.log("it is imposible to happen");
+          
+        }
         else {
-          //insert
-          const operation = OpSeq.new();
-
-          if (json.offset == this.model.getValue().length) {
-            operation.retain(json.offset);
-            operation.insert(json.operation);
-
-          }
-          else if (json.offset > this.model.getValue().length) {
-            console.log("werid thing happened");
-            //do nothing
-          }
-          else {
-            const txtTmp = this.model.getValue();
-            operation.retain(json.offset);
-            var index = this.model.getValue().length - json.offset;
-            operation.delete(index);
-            operation.insert(json.operation);
-            operation.insert(txtTmp.substring(json.offset));
-          }
+          this.version = json.version;
+          const operation = this.operation(data);
+          this.prevOp = operation;
           const asd = operation.apply(this.model.getValue());
           if (asd != null) {
             this.model.setValue(asd);
           }
         }
       }
-
-
-
-
-
-
     };
+  }
+  private operation(data: string) {
+    const json = JSON.parse(data);
+    if (json.operation === "") {
+      //delete
+      const operation = OpSeq.new();
+      if (json.offset == this.model.getValue().length) {
+        operation.retain(json.offset);
+        operation.delete(1);
+      }
+      else if (json.offset > this.model.getValue().length) {
+        console.log("werid thing happened");
+        //do nothing
+      }
+      else {
+        const txtTmp = this.model.getValue();
+        operation.retain(json.offset);
+        var index = this.model.getValue().length - json.offset;
+        operation.delete(index);
+        //operation.delete(1);
+        operation.insert(txtTmp.substring(json.offset + 1));
+      }
+      return operation;
+    }
+    else {
+      //insert
+      const operation = OpSeq.new();
+
+      if (json.offset == this.model.getValue().length) {
+        operation.retain(json.offset);
+        operation.insert(json.operation);
+
+      }
+      else if (json.offset > this.model.getValue().length) {
+        console.log("werid thing happened");
+        //do nothing
+      }
+      else {
+        const txtTmp = this.model.getValue();
+        operation.retain(json.offset);
+        var index = this.model.getValue().length - json.offset;
+        operation.delete(index);
+        operation.insert(json.operation);
+        operation.insert(txtTmp.substring(json.offset));
+      }
+      return operation;
+    }
+    
   }
   private onChange(event: editor.IModelContentChangedEvent) {
     if (event.isFlush) {
 
     }
     else {
+      //version ++
+      this.version = this.version + 1;
       const current = this.lastValue;
       let offset = 0;
 
@@ -181,10 +195,12 @@ class TextEditor {
       for (const change of event.changes) {
         // destructure the change
         const { text, rangeOffset, rangeLength } = change;
-        let info: opInfo = { operation: text, id: NaN, offset: rangeOffset };
+        let info: opInfo = { operation: text, id: NaN, offset: rangeOffset, version: this.version, race: false};
         this.ws?.send(JSON.stringify(info));
+        this.prevOp = this.operation(JSON.stringify(info));
         //this.lastValue = this.model.getValue();
         //this.applyClient(currentOp);
+        //prevOp = 
       }
 
 
@@ -197,5 +213,7 @@ interface opInfo {
   id: number;
   operation: any;
   offset: number;
+  race: boolean;
+  version: number;
 }
 export default TextEditor;

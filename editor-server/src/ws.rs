@@ -5,6 +5,16 @@ use tokio::sync::mpsc;
 use futures::{FutureExt, StreamExt};                        //FutureExt needed or u get "trait bounds were not satisfied"
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use serde_json::json;
+use serde::{Serialize, Deserialize};
+use serde_json::{Result, Value};
+
+#[derive(Deserialize)]
+struct opInfo {
+    operation: String,
+    id: i32,
+    offset: i32
+}
+
 
 pub async fn user_connection(ws: WebSocket, users: Users) {
     let (user_ws_sender, mut user_ws_receiver) = ws.split();
@@ -44,13 +54,19 @@ async fn user_message(my_id: usize, msg: Message, users: &Users) {
     } else {
         return;
     };
-
+    eprintln!("SERVER: msg sent by {} is {}", my_id, msg);
+    let v: Value = serde_json::from_str(msg).unwrap();
+    eprintln!("SERVER: offset is {}",  v["offset"]);
     for (&uid, user) in users.read().await.iter() {
+        //before send, check if the user's version has the same version number as the operation
+        //if does, then there is a concurrenc race, need to use tranform!!!
         if my_id != uid {
            if let Err(_disconnected) = user.sender.send(Ok(Message::text(msg))) {}
+           //after send, check update the version
         }
     }
 }
+
 
 async fn user_disconnected(my_id: usize, users: &Users) {
     eprintln!("good bye user: {}", my_id);
