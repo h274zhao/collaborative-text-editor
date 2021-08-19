@@ -1,0 +1,28 @@
+.register_room,
+.join_room {
+  width: 400px;
+  margin: 20px auto;
+  display: flex;
+  text-align: center;
+  justify-content: center;
+}
+
+.Dropdown-control {
+  height: 40px;
+  border: 1px solid lightgray;
+  border-radius: 10px;
+  font-size: 18px;
+  width: 200px;
+  display: block;
+}
+
+.btn {
+  height: 40px;
+  border: 1px solid lightgray;
+  border-radius: 10px;
+  font-size: 18px;
+  width: 100px;
+  cursor: pointer;
+  display: block;
+  margin: 10px auto;
+}
