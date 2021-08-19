@@ -1,5 +1,4 @@
-import { link } from "fs";
-import type { editor, IDisposable, IPosition, } from "monaco-editor/esm/vs/editor/editor.api";
+import type { editor, IDisposable } from "monaco-editor/esm/vs/editor/editor.api";
 import { OpSeq } from "rust-wasm";
 
 
@@ -27,8 +26,6 @@ class TextEditor {
   private readonly resetFailuresId: number;
 
 
-  private currentValue: string = "";
-  private ignoreChanges: boolean = false;
   private lastValue: string = "";
 
   private me: number = -1;
@@ -54,11 +51,6 @@ class TextEditor {
   }
 
   dispose() {
-    /*
-    window.clearInterval(this.tryConnectId);
-    window.clearInterval(this.resetFailuresId);
-    this.onChangeHandle.dispose();
-    */
     this.ws?.close();
   }
 
@@ -69,25 +61,16 @@ class TextEditor {
     ws.onopen = () => {
       console.log("connected");
       this.ws = ws;
+      this.ws?.send("New connection");
     };
     ws.onclose = () => {
       console.log("disconnected");
     };
 
-    // try {
-
-
-    // }
-    // catch (e) {
-    //   if (data === "This is a new connection") {
-    //     ws.send(this.model.getValue());
-    //   }
-    //   else if (data !== this.model.getValue()) {
-    //     this.model.setValue(data);
-
-
     ws.onmessage = ({ data }) => {
 
+      const position: any = this.options.editor.getPosition();
+      try {
       const json = JSON.parse(data);
 
       if (json.users) {
@@ -110,8 +93,7 @@ class TextEditor {
             operation.delete(1);
           }
           else if (json.offset > this.model.getValue().length) {
-            console.log("werid thing happened");
-            //do nothing
+            console.log("weird thing happened");
           }
           else {
             console.log("text length");
@@ -123,13 +105,13 @@ class TextEditor {
             operation.retain(json.offset);
             var index = this.model.getValue().length - json.offset;
             operation.delete(index);
-            //operation.delete(1);
             operation.insert(txtTmp.substring(json.offset + 1));
           }
 
           const asd = operation.apply(this.model.getValue());
           if (asd != null) {
             this.model.setValue(asd);
+            this.options.editor.setPosition(position);
           }
         }
         else {
@@ -142,8 +124,7 @@ class TextEditor {
 
           }
           else if (json.offset > this.model.getValue().length) {
-            console.log("werid thing happened");
-            //do nothing
+            console.log("weird thing happened");
           }
           else {
             const txtTmp = this.model.getValue();
@@ -156,43 +137,42 @@ class TextEditor {
           const asd = operation.apply(this.model.getValue());
           if (asd != null) {
             this.model.setValue(asd);
+            this.options.editor.setPosition(position);
           }
         }
       }
-
-
-
-
-
-
+    }
+    catch (err) {
+      if (data === "New connection") {
+        this.ws?.send(this.model.getValue());
+      }
+      else {
+        this.model.setValue(data);
+        this.lastValue = data;
+        this.options.editor.setPosition(position);
+      }
+    }
     };
   }
   private onChange(event: editor.IModelContentChangedEvent) {
     if (event.isFlush) {
-
     }
     else {
-      const current = this.lastValue;
-      let offset = 0;
-
-      let currentOp = OpSeq.new();
-
       event.changes.sort((a, b) => b.rangeOffset - a.rangeOffset);
       for (const change of event.changes) {
-        // destructure the change
         const { text, rangeOffset, rangeLength } = change;
-        let info: opInfo = { operation: text, id: NaN, offset: rangeOffset };
-        this.ws?.send(JSON.stringify(info));
-        //this.lastValue = this.model.getValue();
-        //this.applyClient(currentOp);
+        if (text.length > 1 || (text === "" && this.lastValue.length - text.length > 1)) {
+          this.ws?.send(this.model.getValue());
+        }
+        else {
+          let info: opInfo = { operation: text, id: NaN, offset: rangeOffset };
+          this.ws?.send(JSON.stringify(info));
+        }
+        this.lastValue = this.model.getValue();
       }
-
-
     }
   }
 }
-
-
 interface opInfo {
   id: number;
   operation: any;
