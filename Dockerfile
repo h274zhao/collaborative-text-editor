@@ -20,6 +20,6 @@ RUN npm run build
 
 FROM scratch
 COPY --from=frontend /usr/src/app/build build
-COPY --from=backend /home/rust/src/target/x86_64-unknown-linux-musl/release/rust-warp .
+COPY --from=backend /home/rust/src/target/x86_64-unknown-linux-musl/release/editor-server .
 USER 1000:1000
-CMD [ "./rust-warp" ]
+CMD [ "./editor-server" ]

@@ -27,7 +27,7 @@ const drawerWidth = 240;
 
 //TO-DO: need to do change the code to match our own server implementation
 function getWsUri(id: string) {
-  const uri = 'ws://localhost:8000/editor';
+  const uri = `ws://${window.location.host}/api/editor`;
   return uri;
 }
 
