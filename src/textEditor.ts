@@ -101,8 +101,7 @@ class TextEditor {
       else {
 
         if (json.version == this.version) {
-          console.log("racing condition");
-          //racing condition
+          console.log("concurrency condition");
           const curOperation = this.operation(data);
           //transform between preOp and curOperation
           const pair = this.prevOp.transform(curOperation)!;
