@@ -45,7 +45,7 @@ pub async fn room_register_handler(body: RegisterRequest, rooms: Rooms) -> Resul
 
     register_room(uuid.clone(), room_name.clone(), rooms).await;
     Ok(json(&RegisterResponse {
-        url: format!("ws://127.0.0.1:8000/editor/{}/{}", room_name, uuid),
+        url: format!("ws://localhost:3030/api/editor/{}/{}", room_name, uuid),
     }))
 }
 

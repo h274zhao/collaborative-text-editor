@@ -53,9 +53,6 @@ impl Room {
     }
 }
 
-#[tokio::main]
-async fn main() {
-    let rooms: Rooms = Rooms::default();
 fn server() -> BoxedFilter<(impl Reply,)> {
     warp::path("api")
         .and(backend())
@@ -69,7 +66,7 @@ fn frontend() -> BoxedFilter<(impl Reply,)> {
 
 fn backend() -> BoxedFilter<(impl Reply,)> {
 
-    let users: Users = Users::default();
+    let rooms: Rooms = Rooms::default();
 
     let ws_editor_route = warp::path("editor")
         .and(warp::ws())
@@ -101,8 +98,8 @@ fn backend() -> BoxedFilter<(impl Reply,)> {
             .allow_any_origin()
             .allow_headers(vec!["Content-Type", "User-Agent", "Sec-Fetch-Mode", "Referer", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", "content-type"])
             .allow_methods(vec!["OPTIONS", "GET", "POST", "DELETE", "PUT"]));
-    warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
-    ws_editor_route.boxed()
+
+    routes.boxed()
 }
 
 fn with_rooms(rooms: Rooms) -> impl Filter<Extract = (Rooms,), Error = Infallible> + Clone {
@@ -112,11 +109,5 @@ fn with_rooms(rooms: Rooms) -> impl Filter<Extract = (Rooms,), Error = Infallibl
 #[tokio::main]
 async fn main() {
 
-    let port = std::env::var("PORT")
-        .unwrap_or_else(|_| String::from("3030"))
-        .parse()
-        .expect("Unable to parse PORT");
-
-    // let routes = ws_editor_route;
-    warp::serve(server()).run(([0, 0, 0, 0], port)).await;
+    warp::serve(server()).run(([0, 0, 0, 0], 3030)).await;
 }

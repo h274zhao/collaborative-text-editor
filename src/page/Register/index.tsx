@@ -3,7 +3,7 @@ import Dropdown from 'react-dropdown';
 import 'react-dropdown/style.css';
 import axios from 'axios'
 import { useEffect, useState } from 'react'
-
+import { URLS } from "../../constants/urls"
 import "./styles.css"
 
 export default function Register(props: any) {
@@ -13,7 +13,7 @@ export default function Register(props: any) {
 
   useEffect(() => {
     axios
-      .get("http://localhost:8000/rooms")
+      .get(`http://${URLS.LOCAL_HOST_SERVER}/api/rooms`)
       .then(res => res.data)
       .then(({ rooms }) => {
         setRooms(rooms)
@@ -21,8 +21,9 @@ export default function Register(props: any) {
   }, [])
 
   const createRoom = () => {
+    console.log(process.env.LOCAL_HOST_SERVER);
     axios
-      .post("http://localhost:8000/rooms", {
+      .post(`http://${URLS.LOCAL_HOST_SERVER}/api/rooms`, {
         room_name: newRoomName,
       })
       .then(res => res.data)

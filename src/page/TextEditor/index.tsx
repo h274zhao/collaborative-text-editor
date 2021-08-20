@@ -3,6 +3,8 @@ import Editor from "@monaco-editor/react";
 import { editor } from "monaco-editor/esm/vs/editor/editor.api";
 import TextEditor, { UserInfo } from "./textEditor";
 import SideBar from '../../components/SideBar';
+import { URLS } from "../../constants/urls"
+
 
 // MATERIAL UI
 import AppBar from '@material-ui/core/AppBar';
@@ -17,7 +19,7 @@ import { makeStyles, Theme, createStyles } from '@material-ui/core/styles';
 
 const drawerWidth = 240;
 
-const ws_url = "ws://127.0.0.1:8000/editor"
+const ws_url = `ws://${URLS.LOCAL_HOST_SERVER}/api/editor`
 
 export default function OTEditor(props: any) {
   const classes = useStyles();
