@@ -106,13 +106,10 @@ class TextEditor {
           const curOperation = this.operation(data);
           //transform between preOp and curOperation
           const pair = this.prevOp.transform(curOperation)!;
-
-          const buffer = this.prevOp.compose(pair.second());
-          if(buffer){
-            var asd = buffer.apply(this.model.getValue());
-          }
-          if (asd != null) {
-            this.model.setValue(asd);
+          //const buffer = this.prevOp.compose(pair.second());
+          var content = (pair.second()).apply(this.model.getValue());
+          if (content != null) {
+            this.model.setValue(content);
           }
         }
         else if (json.version < this.version) {
@@ -123,9 +120,9 @@ class TextEditor {
           this.version = json.version;
           const operation = this.operation(data);
           this.prevOp = operation;
-          const asd = operation.apply(this.model.getValue());
-          if (asd != null) {
-            this.model.setValue(asd);
+          const content = operation.apply(this.model.getValue());
+          if (content != null) {
+            this.model.setValue(content);
           }
         }
       }
