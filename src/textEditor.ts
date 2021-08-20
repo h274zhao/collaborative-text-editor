@@ -192,12 +192,9 @@ class TextEditor {
       for (const change of event.changes) {
         // destructure the change
         const { text, rangeOffset, rangeLength } = change;
-        let info: opInfo = { operation: text, id: NaN, offset: rangeOffset, version: this.version, race: false};
+        let info: opInfo = { operation: text, offset: rangeOffset, version: this.version};
         this.ws?.send(JSON.stringify(info));
         this.prevOp = this.operation(JSON.stringify(info));
-        //this.lastValue = this.model.getValue();
-        //this.applyClient(currentOp);
-        //prevOp = 
       }
 
 
@@ -207,10 +204,8 @@ class TextEditor {
 
 
 interface opInfo {
-  id: number;
   operation: any;
   offset: number;
-  race: boolean;
   version: number;
 }
 export default TextEditor;
