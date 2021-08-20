@@ -1,0 +1,16 @@
+version: '3'
+services:
+
+  editor-server:
+    build: ./editor-server
+    container_name: editor-server
+    ports:
+      - 3030:3030
+
+  editor-frontend:
+    build: ./
+    container_name: editor-frontend
+    ports:
+      - 3031:3000
+    links:
+      - editor-server
